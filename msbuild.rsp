@@ -1,0 +1,10 @@
+#Appveyor msbuild response file
+
+# set specified target
+/property:Configuration=Release
+/property:Platform=x64
+/target:Rebuild
+#/preprocess
+
+# uncomment below to also include paramaters from @additionalswitches.rsp
+# @additionalswitches.rsp

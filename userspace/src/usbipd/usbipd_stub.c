@@ -22,6 +22,8 @@ typedef struct {
 static int
 walker_devpath(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno, void *ctx)
 {
+	UNREFERENCED_PARAMETER(devno);
+
 	devpath_ctx_t	*pctx = (devpath_ctx_t *)ctx;
 	PSP_DEVICE_INTERFACE_DETAIL_DATA	pdetail;
 	char	*id_inst;
@@ -126,6 +128,9 @@ get_devpath_from_devno(devno_t devno)
 static int
 walker_check_stub(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno, void *ctx)
 {
+	UNREFERENCED_PARAMETER(dev_info);
+	UNREFERENCED_PARAMETER(pdev_info_data);
+
 	devno_t	*pdevno = (devno_t *)ctx;
 
 	if (*pdevno == devno)

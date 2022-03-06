@@ -5,6 +5,7 @@
 
 #include <ws2tcpip.h>
 #include <mstcpip.h>
+#include <stdlib.h>
 
 #include "usbip_common.h"
 #include "usbip_network.h"
@@ -112,12 +113,12 @@ int usbip_net_recv(SOCKET sockfd, void *buff, size_t bufflen)
 	return usbip_net_xmit(sockfd, buff, bufflen, 0);
 }
 
-int usbip_net_send(SOCKET sockfd, void *buff, size_t bufflen)
+int usbip_net_send(SOCKET sockfd, const void *buff, size_t bufflen)
 {
-	return usbip_net_xmit(sockfd, buff, bufflen, 1);
+	return usbip_net_xmit(sockfd, (PVOID)(uintptr_t)buff, bufflen, 1);
 }
 
-int usbip_net_send_op_common(SOCKET sockfd, uint32_t code, uint32_t status)
+int usbip_net_send_op_common(SOCKET sockfd, uint16_t code, uint32_t status)
 {
 	struct op_common op_common;
 	int rc;

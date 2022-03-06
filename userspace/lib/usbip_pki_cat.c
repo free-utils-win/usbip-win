@@ -1,6 +1,11 @@
 #include <windows.h>
 #include <wincrypt.h>
+#pragma warning(push)
+#pragma warning(disable:4201)
 #include <mscat.h>
+#pragma warning(pop)
+#include <stdlib.h>
+
 #include "usbip_common.h"
 #include "usbip_util.h"
 
@@ -26,7 +31,7 @@ typedef struct SPC_LINK_ {
 		LPWSTR pwszUrl;
 		SPC_SERIALIZED_OBJECT Moniker;
 		LPWSTR pwszFile;
-	};
+	} pwszMoniker;
 } SPC_LINK, *PSPC_LINK;
 
 typedef struct _SPC_PE_IMAGE_DATA {
@@ -48,7 +53,7 @@ calc_hash(LPCSTR fpath, PBYTE pbHash)
 {
 	HANDLE	hFile;
 	DWORD	cbHash = SHA1_HASH_LENGTH;
-	LPWSTR wszFilePath = NULL;
+	//LPWSTR wszFilePath = NULL;
 
 	hFile = CreateFile(fpath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
@@ -89,7 +94,7 @@ add_file_hash(HANDLE hCat, LPCSTR path, LPCSTR fname, BOOL isPEType)
 	convert_to_hashstr(pbHash, wstrHash);
 
 	sSPCLink.dwLinkChoice = SPC_FILE_LINK_CHOICE;
-	sSPCLink.pwszUrl = L"<<<Obsolete>>>";
+	sSPCLink.pwszMoniker.pwszUrl = L"<<<Obsolete>>>";
 	cbEncoded = sizeof(pbEncoded);
 
 	if (isPEType) {

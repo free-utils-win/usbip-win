@@ -142,6 +142,9 @@ static int usbip_help(int argc, char *argv[])
 
 static int usbip_version(int argc, char *argv[])
 {
+	UNREFERENCED_PARAMETER(argc);
+	UNREFERENCED_PARAMETER(argv);
+
 	printf("usbip (%s)\n", usbip_version_string);
 	return 0;
 }
@@ -152,7 +155,7 @@ static int run_command(const struct command *cmd, int argc, char *argv[])
 	return cmd->fn(argc, argv);
 }
 
-int main(int argc, char *argv[])
+int __cdecl main(int argc, char *argv[])
 {
 	static const struct option opts[] = {
 		{ "debug",    no_argument,       NULL, 'd' },

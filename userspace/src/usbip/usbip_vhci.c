@@ -13,6 +13,8 @@
 static int
 walker_devpath(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno, void *ctx)
 {
+	UNREFERENCED_PARAMETER(devno);
+
 	char	**pdevpath = (char **)ctx;
 	char	*id_hw;
 	PSP_DEVICE_INTERFACE_DETAIL_DATA	pdev_interface_detail;

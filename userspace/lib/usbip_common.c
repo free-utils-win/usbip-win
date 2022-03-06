@@ -3,6 +3,7 @@
  */
 
 #include <windows.h>
+#include <stdlib.h>
 
 #include "usbip_common.h"
 #include "names.h"

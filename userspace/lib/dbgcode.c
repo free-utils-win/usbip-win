@@ -28,7 +28,7 @@ static namecode_t	namecodes_err[] = {
 };
 
 static const char *
-dbg_namecode(char *buf, int buf_max, namecode_t *namecodes, const char *codetype, int code)
+dbg_namecode(char *buf, int buf_max, namecode_t *namecodes, const char *codetype, unsigned int code)
 {
 	int i;
 

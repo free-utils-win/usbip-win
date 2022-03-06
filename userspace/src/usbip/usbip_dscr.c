@@ -2,12 +2,14 @@
 
 #include "usbip_proto.h"
 #include "usbip_network.h"
+#include "usbip_dscr.h"
+#include "usbip_const.h"
 
 /* sufficient large enough seq used to avoid conflict with normal vhci operation */
 static unsigned	seqnum = 0x7ffffff;
 
 static int
-fetch_descriptor(SOCKET sockfd, UINT8 dscr_type, unsigned devid, char *dscr, unsigned short dscr_size)
+fetch_descriptor(SOCKET sockfd, UINT8 dscr_type, unsigned devid, void* dscr, unsigned short dscr_size)
 {
 	struct usbip_header	uhdr;
 	unsigned	alen;
@@ -51,20 +53,20 @@ fetch_descriptor(SOCKET sockfd, UINT8 dscr_type, unsigned devid, char *dscr, uns
 
 /* assume the length of a device descriptor is 18 */
 int
-fetch_device_descriptor(SOCKET sockfd, unsigned devid, char *dscr)
+fetch_device_descriptor(SOCKET sockfd, unsigned devid, PUSB_DEVICE_DESCRIPTOR dscr)
 {
-	return fetch_descriptor(sockfd, 1, devid, dscr, 18);
+	return fetch_descriptor(sockfd, 1, devid, dscr, sizeof(struct _USB_DEVICE_DESCRIPTOR));
 }
 
 int
-fetch_conf_descriptor(SOCKET sockfd, unsigned devid, char *dscr, unsigned short *plen)
+fetch_conf_descriptor(SOCKET sockfd, unsigned devid, PUSB_CONFIGURATION_DESCRIPTOR dscr, unsigned short *plen)
 {
-	char	buf[9];
+	struct _USB_CONFIGURATION_DESCRIPTOR	buf;
 	unsigned short	alen;
 
-	if (fetch_descriptor(sockfd, 2, devid, buf, 9) < 0)
+	if (fetch_descriptor(sockfd, 2, devid, &buf, sizeof(struct _USB_CONFIGURATION_DESCRIPTOR)) < 0)
 		return -1;
-	alen = *((unsigned short *)buf + 1);
+	alen = buf.wTotalLength;
 	if (dscr == NULL) {
 		*plen = alen;
 		return 0;

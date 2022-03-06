@@ -1,5 +1,7 @@
 #include "usbipd.h"
 
+#include <stdlib.h>
+
 #include "usbip_network.h"
 #include "usbipd_stub.h"
 #include "usbip_setupdi.h"
@@ -13,6 +15,8 @@ typedef struct {
 static VOID CALLBACK
 forwarder_stub(PTP_CALLBACK_INSTANCE inst, PVOID ctx, PTP_WORK work)
 {
+	UNREFERENCED_PARAMETER(inst);
+
 	forwarder_ctx_t	*pctx = (forwarder_ctx_t *)ctx;
 
 	dbg("stub forwarding started");

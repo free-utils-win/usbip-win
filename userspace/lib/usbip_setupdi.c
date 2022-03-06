@@ -89,17 +89,16 @@ get_intf_detail(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, LPCGUID pgui
 	SP_DEVICE_INTERFACE_DATA	dev_interface_data;
 	PSP_DEVICE_INTERFACE_DETAIL_DATA	pdev_interface_detail;
 	unsigned long len = 0;
-	DWORD	err;
 
 	dev_interface_data.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 	if (!SetupDiEnumDeviceInterfaces(dev_info, pdev_info_data, pguid, 0, &dev_interface_data)) {
-		DWORD	err = GetLastError();
-		if (err != ERROR_NO_MORE_ITEMS)
-			dbg("SetupDiEnumDeviceInterfaces failed: err: 0x%lx", err);
+		DWORD	err_2 = GetLastError();
+		if (err_2 != ERROR_NO_MORE_ITEMS)
+			dbg("SetupDiEnumDeviceInterfaces failed: err: 0x%lx", err_2);
 		return NULL;
 	}
 	SetupDiGetDeviceInterfaceDetail(dev_info, &dev_interface_data, NULL, 0, &len, NULL);
-	err = GetLastError();
+	DWORD	err = GetLastError();
 	if (err != ERROR_INSUFFICIENT_BUFFER) {
 		dbg("SetupDiGetDeviceInterfaceDetail failed: err: 0x%lx", err);
 		return NULL;

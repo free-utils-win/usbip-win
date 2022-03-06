@@ -1,3 +1,8 @@
+#pragma once
+
+#ifndef _VHCI_DRIVER_H
+#define _VHCI_DRIVER_H
+
 #include <ntddk.h>
 #include <wdf.h>
 #include <usb.h>
@@ -5,7 +10,7 @@
 #include <wdfusb.h>
 #include <initguid.h>
 
-#include <ude/1.0/UdeCx.h>
+#include <UdeCx.h> //<ude/1.1/UdeCx.h>
 
 #include "vhci_dev.h"
 #include "vhci_dbg.h"
@@ -19,3 +24,5 @@ EXTERN_C_START
 #define VHCI_POOLTAG	'ichv'
 
 EXTERN_C_END
+
+#endif //_VHCI_DRIVER_H

@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef _VHCI_DEV_H
+#define _VHCI_DEV_H
+
 #include <ntddk.h>
 #include <wdf.h>
 
@@ -114,3 +117,5 @@ extern void put_vusb(pctx_vusb_t vusb);
 extern void put_vusb_passively(pctx_vusb_t vusb);
 
 EXTERN_C_END
+
+#endif //_VHCI_DEV_H

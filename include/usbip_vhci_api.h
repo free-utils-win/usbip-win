@@ -7,6 +7,10 @@
 #include <winioctl.h>
 #endif
 
+#include <usbspec.h>
+
+#include "usbip_const.h"
+
 //
 // Define an Interface Guid for bus vhci class.
 // This GUID is used to register (IoRegisterDeviceInterface) 
@@ -66,9 +70,9 @@ typedef struct _vhci_pluginfo
 	unsigned int	devid;
 	signed char	port;
 	wchar_t		wserial[MAX_VHCI_SERIAL_ID + 1];
-	unsigned char	dscr_dev[18];
+	struct _USB_DEVICE_DESCRIPTOR	dscr_dev; //[18]
 	/* variable length. It's a full-length configuration descriptor */
-	unsigned char	dscr_conf[9];
+	struct _USB_CONFIGURATION_DESCRIPTOR	dscr_conf; //[9]
 } vhci_pluginfo_t, *pvhci_pluginfo_t;
 
 /* usbip-win assumes max port is 127 */

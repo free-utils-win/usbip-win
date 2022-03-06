@@ -30,14 +30,8 @@
     <None Include="import.cmd" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\driver\stub\usbip_stub.vcxproj">
-      <Project>{08230aff-8015-437b-9df1-af8d0112df59}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\driver\vhci\usbip_vhci.vcxproj">
-      <Project>{f35a874e-e790-44b5-9c14-749c8854a0c4}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\driver\vhci_ude\usbip_vhci_ude.vcxproj">
-      <Project>{27d5f152-c29d-4c5c-a65c-78abee57baea}</Project>
+    <ProjectReference Include="..\userspace\src\usbip\usbip.vcxproj">
+      <Project>{36cee68d-d6cf-4413-978c-794488f44555}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">

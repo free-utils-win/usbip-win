@@ -363,7 +363,7 @@ setup_rw_overlapped(devbuf_t *buff)
 }
 
 static BOOL
-init_devbuf(devbuf_t *buff, const char *desc, BOOL is_req, BOOL swap_req, HANDLE hdev, HANDLE hEvent)
+init_devbuf(devbuf_t *buff, const char *desc, BOOL is_req, BOOL swap_req, HANDLE hdev, HANDLE hEvent_local)
 {
 	buff->bufp = (char *)malloc(1024);
 	if (buff->bufp == NULL)
@@ -382,7 +382,7 @@ init_devbuf(devbuf_t *buff, const char *desc, BOOL is_req, BOOL swap_req, HANDLE
 	buff->bufmaxp = 1024;
 	buff->bufmaxc = 0;
 	buff->hdev = hdev;
-	buff->hEvent = hEvent;
+	buff->hEvent = hEvent_local;
 	if (!setup_rw_overlapped(buff)) {
 		free(buff->bufp);
 		return FALSE;
@@ -575,9 +575,11 @@ read_write_dev(devbuf_t *rbuff, devbuf_t *wbuff)
 
 static volatile BOOL	interrupted;
 
-static void
+static void __cdecl
 signalhandler(int signal)
 {
+	UNREFERENCED_PARAMETER(signal);
+
 	interrupted = TRUE;
 	SetEvent(hEvent);
 }

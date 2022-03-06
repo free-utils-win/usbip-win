@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "usbip_const.h"
+
 /* Defines for op_code status in server/client op_common PDUs */
 #define ST_OK	0x00
 #define ST_NA	0x01
@@ -31,26 +33,6 @@
 #define ERR_PORTFULL	(-10)
 #define ERR_ACCESS	(-11)
 #define ERR_CERTIFICATE	(-12)
-
-/* FIXME: how to sync with drivers/usbip_common.h ? */
-enum usbip_device_status{
-	/* dev status unknown. */
-	DEV_ST_UNKNOWN = 0x00,
-
-	/* sdev is available. */
-	SDEV_ST_AVAILABLE = 0x01,
-	/* sdev is now used. */
-	SDEV_ST_USED,
-	/* sdev is unusable because of a fatal error. */
-	SDEV_ST_ERROR,
-
-	/* vdev does not connect a remote device. */
-	VDEV_ST_NULL,
-	/* vdev is used, but the USB address is not assigned yet */
-	VDEV_ST_NOTASSIGNED,
-	VDEV_ST_USED,
-	VDEV_ST_ERROR
-};
 
 #define USBIP_DEV_PATH_MAX		256
 #define USBIP_BUS_ID_SIZE		32

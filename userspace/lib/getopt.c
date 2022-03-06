@@ -13,17 +13,16 @@ in the public domain.
 /*LINTLIBRARY*/
 
 #include <string.h>
-
-extern int write();
+#include <io.h>
 
 //#define NULL	0
 #define EOF	(-1)
 #define ERR(s, c)	if(opterr){\
 	char errbuf[2];\
 	errbuf[0] = c; errbuf[1] = '\n';\
-	(void) write(2, argv[0], (unsigned)strlen(argv[0]));\
-	(void) write(2, s, (unsigned)strlen(s));\
-	(void) write(2, errbuf, 2);}
+	(void) _write(2, argv[0], (unsigned)strlen(argv[0]));\
+	(void) _write(2, s, (unsigned)strlen(s));\
+	(void) _write(2, errbuf, 2);}
 
 
 int	opterr = 1;
@@ -32,12 +31,12 @@ int	optopt;
 char	*optarg;
 
 int
-getopt(argc, argv, opts)
-int	argc;
-char	**argv, *opts;
+getopt(int argc,
+	char** argv,
+	char* opts)
 {
 	static int sp = 1;
-	register int c;
+	register char c;
 	register char *cp;
 
 	if(sp == 1)

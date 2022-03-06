@@ -82,7 +82,7 @@ typedef struct _SIGNER_SUBJECT_INFO {
 	union {
 		SIGNER_FILE_INFO *pSignerFileInfo;
 		SIGNER_BLOB_INFO *pSignerBlobInfo;
-	};
+	} pSignerInfo;
 } SIGNER_SUBJECT_INFO, *PSIGNER_SUBJECT_INFO;
 
 typedef struct _SIGNER_CERT_STORE_INFO {  
@@ -106,7 +106,7 @@ typedef struct _SIGNER_CERT {
 		LPCWSTR pwszSpcFile;    
 		SIGNER_CERT_STORE_INFO *pCertStoreInfo;    
 		SIGNER_SPC_CHAIN_INFO *pSpcChainInfo;  
-	};
+	} p;
 	HWND hwnd;
 } SIGNER_CERT, *PSIGNER_CERT;
 
@@ -130,7 +130,7 @@ typedef struct _SIGNER_SIGNATURE_INFO {
 	DWORD dwAttrChoice;
 	union {
 		SIGNER_ATTR_AUTHCODE *pAttrAuthcode;
-	};
+	} pAttrAuthcode;
 	PCRYPT_ATTRIBUTES_ARRAY psAuthenticated;
 	PCRYPT_ATTRIBUTES_ARRAY psUnauthenticated;
 } SIGNER_SIGNATURE_INFO, *PSIGNER_SIGNATURE_INFO;
@@ -144,7 +144,7 @@ typedef struct _SIGNER_PROVIDER_INFO {
 	union {    
 		LPWSTR pwszPvkFileName;    
 		LPWSTR pwszKeyContainer;  
-	} ;
+	} pwsz;
 } SIGNER_PROVIDER_INFO,  *PSIGNER_PROVIDER_INFO;
 
 typedef struct _SIGNER_CONTEXT {  

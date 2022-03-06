@@ -151,7 +151,7 @@ struct op_devlist_reply {
 
 struct op_devlist_reply_extra {
 	struct usbip_usb_device    udev;
-	struct usbip_usb_interface uinf[];
+	struct usbip_usb_interface *uinf;
 };
 
 #pragma pack(pop)
@@ -169,8 +169,8 @@ void usbip_net_pack_usb_device(int pack, struct usbip_usb_device *udev);
 void usbip_net_pack_usb_interface(int pack, struct usbip_usb_interface *uinf);
 
 int usbip_net_recv(SOCKET sockfd, void *buff, size_t bufflen);
-int usbip_net_send(SOCKET sockfd, void *buff, size_t bufflen);
-int usbip_net_send_op_common(SOCKET sockfd, uint32_t code, uint32_t status);
+int usbip_net_send(SOCKET sockfd, const void* buff, size_t bufflen);
+int usbip_net_send_op_common(SOCKET sockfd, uint16_t code, uint32_t status);
 int usbip_net_recv_op_common(SOCKET sockfd, uint16_t *code, int *pstatus);
 int usbip_net_set_reuseaddr(SOCKET sockfd);
 int usbip_net_set_nodelay(SOCKET sockfd);

@@ -1,6 +1,7 @@
 #include "usbipd.h"
 
 #include <ws2tcpip.h>
+#include <stdlib.h>
 
 #include "usbip_network.h"
 

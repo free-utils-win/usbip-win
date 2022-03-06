@@ -101,7 +101,7 @@ vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, ULONG inlen, PFILE
 		DBGE(DBG_IOCTL, "too small input length: %lld < %lld", inlen, sizeof(vhci_pluginfo_t));
 		return STATUS_INVALID_PARAMETER;
 	}
-	pdscr_fullsize = (PUSHORT)pluginfo->dscr_conf + 1;
+	pdscr_fullsize = &pluginfo->dscr_conf.wTotalLength;
 	if (inlen != sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9) {
 		DBGE(DBG_IOCTL, "invalid pluginfo format: %lld != %lld", inlen, sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9);
 		return STATUS_INVALID_PARAMETER;
@@ -118,8 +118,8 @@ vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, ULONG inlen, PFILE
 	vpdo = DEVOBJ_TO_VPDO(devobj);
 	vpdo->common.parent = &VHUB_FROM_VHCI(vhci)->common;
 
-	setup_vpdo_with_dsc_dev(vpdo, (PUSB_DEVICE_DESCRIPTOR)pluginfo->dscr_dev);
-	setup_vpdo_with_dsc_conf(vpdo, (PUSB_CONFIGURATION_DESCRIPTOR)pluginfo->dscr_conf);
+	setup_vpdo_with_dsc_dev(vpdo, &pluginfo->dscr_dev);
+	setup_vpdo_with_dsc_conf(vpdo, &pluginfo->dscr_conf);
 
 	if (pluginfo->wserial[0] != L'\0')
 		vpdo->winstid = libdrv_strdupW(pluginfo->wserial);

@@ -126,7 +126,7 @@ ioctl_plugin_vusb(WDFQUEUE queue, WDFREQUEST req, size_t inlen, size_t outlen)
 		TRE(IOCTL, "failed to get pluginfo buffer: %!STATUS!", status);
 		return status;
 	}
-	pdscr_fullsize = (PUSHORT)pluginfo->dscr_conf + 1;
+	pdscr_fullsize = &pluginfo->dscr_conf.wTotalLength;
 	if (len != sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9) {
 		TRE(IOCTL, "invalid pluginfo format: %lld != %lld", len, sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9);
 		return STATUS_INVALID_PARAMETER;

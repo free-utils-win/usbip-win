@@ -7,6 +7,7 @@
 #include <setupapi.h>
 #include <newdev.h>
 #include <io.h>
+#include <stdlib.h>
 
 typedef enum {
 	DRIVER_ROOT,
@@ -339,7 +340,7 @@ install_device(drv_info_t *pinfo)
 		return ret;
 	}
 
-	if (!SetupDiSetDeviceRegistryProperty(hdevinfoset, &devinfo, SPDRP_HARDWAREID, pinfo->hwid, (DWORD)(strlen(pinfo->hwid) + 2))) {
+	if (!SetupDiSetDeviceRegistryProperty(hdevinfoset, &devinfo, SPDRP_HARDWAREID, (const BYTE*)pinfo->hwid, (DWORD)(strlen(pinfo->hwid) + 2))) {
 		dbg("failed to set hw id: 0x%lx", GetLastError());
 		SetupDiDestroyDeviceInfoList(hdevinfoset);
 		return ERR_GENERAL;

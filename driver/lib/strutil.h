@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ntddk.h>
-
 size_t libdrv_strlenW(LPCWSTR cwstr);
 LPWSTR libdrv_strdupW(LPCWSTR cwstr);
 

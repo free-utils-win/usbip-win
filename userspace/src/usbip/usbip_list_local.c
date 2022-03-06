@@ -17,6 +17,7 @@
  */
 
 #include <guiddef.h>
+#include <stdlib.h>
 
 #include "usbip_common.h"
 #include "usbip_network.h"

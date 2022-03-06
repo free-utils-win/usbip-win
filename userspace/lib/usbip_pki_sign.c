@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <stdlib.h>
+
 #include "mssign32.h"
 #include "usbip_common.h"
 #include "usbip_util.h"
@@ -85,7 +87,7 @@ sign_file(LPCSTR subject, LPCSTR fpath)
 	dwIndex = 0;
 	signerSubjectInfo.pdwIndex = &dwIndex;
 	signerSubjectInfo.dwSubjectChoice = SIGNER_SUBJECT_FILE;
-	signerSubjectInfo.pSignerFileInfo = &signerFileInfo;
+	signerSubjectInfo.pSignerInfo.pSignerFileInfo = &signerFileInfo;
 
 	// Prepare SIGNER_CERT_STORE_INFO struct
 	signerCertStoreInfo.cbSize = sizeof(SIGNER_CERT_STORE_INFO);
@@ -96,7 +98,7 @@ sign_file(LPCSTR subject, LPCSTR fpath)
 	// Prepare SIGNER_CERT struct
 	signerCert.cbSize = sizeof(SIGNER_CERT);
 	signerCert.dwCertChoice = SIGNER_CERT_STORE;
-	signerCert.pCertStoreInfo = &signerCertStoreInfo;
+	signerCert.p.pCertStoreInfo = &signerCertStoreInfo;
 	signerCert.hwnd = NULL;
 
 	// Prepare the additional Authenticode OIDs
@@ -117,7 +119,7 @@ sign_file(LPCSTR subject, LPCSTR fpath)
 	signerSignatureInfo.cbSize = sizeof(SIGNER_SIGNATURE_INFO);
 	signerSignatureInfo.algidHash = CALG_SHA_256;
 	signerSignatureInfo.dwAttrChoice = SIGNER_NO_ATTR;
-	signerSignatureInfo.pAttrAuthcode = NULL;
+	signerSignatureInfo.pAttrAuthcode.pAttrAuthcode = NULL;
 	signerSignatureInfo.psAuthenticated = &cryptAttributesArray;
 	signerSignatureInfo.psUnauthenticated = NULL;
 

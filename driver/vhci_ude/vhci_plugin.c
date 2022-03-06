@@ -1,3 +1,5 @@
+#include <ntdef.h>
+
 #include "vhci_driver.h"
 #include "vhci_plugin.tmh"
 
@@ -86,9 +88,9 @@ setup_vusb(UDECXUSBDEVICE ude_usbdev, pvhci_pluginfo_t pluginfo)
 		return FALSE;
 	}
 
-	setup_with_dsc_dev(vusb, (PUSB_DEVICE_DESCRIPTOR)pluginfo->dscr_dev);
+	setup_with_dsc_dev(vusb, &pluginfo->dscr_dev);
 
-	if (!setup_with_dsc_conf(vusb, (PUSB_CONFIGURATION_DESCRIPTOR)pluginfo->dscr_conf)) {
+	if (!setup_with_dsc_conf(vusb, &pluginfo->dscr_conf)) {
 		TRE(PLUGIN, "failed to setup usb with configuration descritor");
 		return FALSE;
 	}
@@ -182,12 +184,12 @@ setup_descriptors(PUDECXUSBDEVICE_INIT pdinit, pvhci_pluginfo_t pluginfo)
 	NTSTATUS	status;
 	USHORT		conf_dscr_fullsize;
 
-	status = UdecxUsbDeviceInitAddDescriptor(pdinit, pluginfo->dscr_dev, 18);
+	status = UdecxUsbDeviceInitAddDescriptor(pdinit, (PUCHAR)&pluginfo->dscr_dev, sizeof(struct _USB_DEVICE_DESCRIPTOR));
 	if (NT_ERROR(status)) {
 		TRW(PLUGIN, "failed to add a device descriptor to device init");
 	}
-	conf_dscr_fullsize = *((PUSHORT)pluginfo->dscr_conf + 1);
-	status = UdecxUsbDeviceInitAddDescriptor(pdinit, pluginfo->dscr_conf, conf_dscr_fullsize);
+	conf_dscr_fullsize = pluginfo->dscr_conf.wTotalLength;
+	status = UdecxUsbDeviceInitAddDescriptor(pdinit, (PUCHAR)&pluginfo->dscr_conf, conf_dscr_fullsize);
 	if (NT_ERROR(status)) {
 		TRW(PLUGIN, "failed to add a configuration descriptor to device init");
 	}
@@ -213,7 +215,7 @@ create_endpoints(UDECXUSBDEVICE ude_usbdev, pvhci_pluginfo_t pluginfo)
 {
 	pctx_vusb_t vusb;
 	PUDECXUSBENDPOINT_INIT	epinit;
-	PUSB_CONFIGURATION_DESCRIPTOR	dsc_conf = (PUSB_CONFIGURATION_DESCRIPTOR)pluginfo->dscr_conf;
+	PUSB_CONFIGURATION_DESCRIPTOR	dsc_conf = &pluginfo->dscr_conf;
 	PUSB_ENDPOINT_DESCRIPTOR	dsc_ep;
 	PVOID	start;
 
@@ -238,8 +240,8 @@ create_endpoints(UDECXUSBDEVICE ude_usbdev, pvhci_pluginfo_t pluginfo)
 static UDECX_ENDPOINT_TYPE
 get_eptype(pvhci_pluginfo_t pluginfo)
 {
-	PUSB_DEVICE_DESCRIPTOR	dsc_dev = (PUSB_DEVICE_DESCRIPTOR)pluginfo->dscr_dev;
-	PUSB_CONFIGURATION_DESCRIPTOR	dsc_conf = (PUSB_CONFIGURATION_DESCRIPTOR)pluginfo->dscr_conf;
+	PUSB_DEVICE_DESCRIPTOR	dsc_dev = &pluginfo->dscr_dev;
+	PUSB_CONFIGURATION_DESCRIPTOR	dsc_conf = &pluginfo->dscr_conf;
 
 	if (dsc_dev->bNumConfigurations > 1 || dsc_conf->bNumInterfaces > 1)
 		return UdecxEndpointTypeDynamic;
@@ -251,7 +253,7 @@ get_eptype(pvhci_pluginfo_t pluginfo)
 static UDECX_USB_DEVICE_SPEED
 get_device_speed(pvhci_pluginfo_t pluginfo)
 {
-	unsigned short	bcdUSB = *(unsigned short *)(pluginfo->dscr_dev + 2);
+	USHORT bcdUSB = pluginfo->dscr_dev.bcdUSB;
 
 	switch (bcdUSB) {
 	case 0x0100:

@@ -45,6 +45,8 @@ void usbip_attach_usage(void)
 static int
 import_device(SOCKET sockfd, pvhci_pluginfo_t pluginfo, HANDLE *phdev)
 {
+	UNREFERENCED_PARAMETER(sockfd);
+
 	HANDLE	hdev;
 	int	rc;
 
@@ -88,12 +90,12 @@ build_pluginfo(SOCKET sockfd, unsigned devid)
 		dbg("out of memory or invalid vhci pluginfo size");
 		return NULL;
 	}
-	if (fetch_device_descriptor(sockfd, devid, pluginfo->dscr_dev) < 0) {
+	if (fetch_device_descriptor(sockfd, devid, &pluginfo->dscr_dev) < 0) {
 		dbg("failed to fetch device descriptor");
 		free(pluginfo);
 		return NULL;
 	}
-	if (fetch_conf_descriptor(sockfd, devid, pluginfo->dscr_conf, &conf_dscr_len) < 0) {
+	if (fetch_conf_descriptor(sockfd, devid, &pluginfo->dscr_conf, &conf_dscr_len) < 0) {
 		dbg("failed to fetch configuration descriptor");
 		free(pluginfo);
 		return NULL;
@@ -218,6 +220,8 @@ create_pipe(HANDLE *phRead, HANDLE *phWrite)
 static int
 execute_attacher(HANDLE hdev, SOCKET sockfd, int rhport)
 {
+	UNREFERENCED_PARAMETER(rhport);
+
 	STARTUPINFO	si;
 	PROCESS_INFORMATION	pi;
 	HANDLE	hRead, hWrite;

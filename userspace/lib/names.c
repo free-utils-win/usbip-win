@@ -31,6 +31,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "names.h"
 #include "usbip_common.h"
@@ -78,9 +79,9 @@ struct genericstrtable {
 };
 
 
-#define HASH1  0x10
-#define HASH2  0x02
-#define HASHSZ 16
+#define HASH1  (unsigned int)0x10
+#define HASH2  (unsigned int)0x02
+#define HASHSZ (unsigned int)16
 
 static unsigned int hashnum(unsigned int num)
 {
@@ -373,7 +374,8 @@ static void parse(FILE *f)
 				dbg("Invalid class spec at line %u", linectr);
 				continue;
 			}
-			if (new_class(cp, u)) {
+			assert(u <= UCHAR_MAX);
+			if (new_class(cp, (uint8_t)u)) {
 				dbg("Duplicate class spec at line %u class %04x %s", linectr, u, cp);
 			}
 			dbg("line %5u class %02x %s", linectr, u, cp);
@@ -399,7 +401,8 @@ static void parse(FILE *f)
 				dbg("Invalid vendor spec at line %u", linectr);
 				continue;
 			}
-			if (new_vendor(cp, u)) {
+			assert(u <= USHRT_MAX);
+			if (new_vendor(cp, (uint16_t)u)) {
 				dbg("Duplicate vendor spec at line %u vendor %04x %s", linectr, u, cp);
 			}
 			dbg("line %5u vendor %04x %s", linectr, u, cp);
@@ -417,7 +420,9 @@ static void parse(FILE *f)
 				continue;
 			}
 			if (lastvendor != -1) {
-				if (new_product(cp, lastvendor, u)) {
+				assert(lastvendor <= USHRT_MAX);
+				assert(u <= USHRT_MAX);
+				if (new_product(cp, (uint16_t)lastvendor, (uint16_t)u)) {
 					dbg("Duplicate product spec at line %u product %04x:%04x %s",
 					    linectr, lastvendor, u, cp);
 				}
@@ -426,7 +431,9 @@ static void parse(FILE *f)
 				continue;
 			}
 			if (lastclass != -1) {
-				if (new_subclass(cp, lastclass, u)) {
+				assert(lastclass  <= UCHAR_MAX);
+				assert(u <= UCHAR_MAX);
+				if (new_subclass(cp, (uint8_t)lastclass, (uint8_t)u)) {
 					dbg("err: Duplicate subclass spec at line %u class %02x:%02x %s",
 					    linectr, lastclass, u, cp);
 				}
@@ -457,7 +464,10 @@ static void parse(FILE *f)
 				continue;
 			}
 			if (lastclass != -1 && lastsubclass != -1) {
-				if (new_protocol(cp, lastclass, lastsubclass, u)) {
+				assert(lastclass <= UCHAR_MAX);
+				assert(lastsubclass <= UCHAR_MAX);
+				assert(u <= UCHAR_MAX);
+				if (new_protocol(cp, (uint8_t)lastclass, (uint8_t)lastsubclass, (uint8_t)u)) {
 					dbg("Duplicate protocol spec at line %u class %02x:%02x:%02x %s",
 					    linectr, lastclass, lastsubclass, u, cp);
 				}

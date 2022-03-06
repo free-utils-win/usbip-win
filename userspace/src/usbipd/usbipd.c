@@ -4,6 +4,7 @@
  */
 
 #include <ws2tcpip.h>
+#include <stdlib.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -62,7 +63,7 @@ usbipd_help(void)
 	printf("%s\n", usbipd_help_string);
 }
 
-static void
+static void __cdecl
 signal_handler(int i)
 {
 	dbg("received '%d' signal", i);
@@ -195,7 +196,7 @@ parse_args(int argc, char *argv[])
 	return TRUE;
 }
 
-int
+int __cdecl
 main(int argc, char *argv[])
 {
 	usbip_progname = "usbipd";

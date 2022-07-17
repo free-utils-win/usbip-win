@@ -232,6 +232,8 @@ execute_attacher(HANDLE hdev, SOCKET sockfd, int rhport)
 	BOOL	res;
 	int	ret = ERR_GENERAL;
 
+	UNREFERENCED_PARAMETER(rhport);
+
 	if (!create_pipe(&hRead, &hWrite))
 		return ERR_GENERAL;
 

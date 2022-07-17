@@ -75,6 +75,9 @@ bind_device(const char *busid)
 		case ERR_ALREADYBIND:
 			err("device(%s) is already bound", busid);
 			return 3;
+		case ERR_BADBIND:
+			err("device(%s) is unstably bound", busid);
+			return 3;
 		default:
 			err("failed to bind device on busid %s", busid);
 			return 3;

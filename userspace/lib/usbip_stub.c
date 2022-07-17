@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <newdev.h>
+#include <cfgmgr32.h>
 
 char *get_dev_property(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD prop);
 
@@ -269,8 +269,22 @@ try_to_uninstall_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 	}
 }
 
+static BOOL
+is_reboot_required(DWORD devInst)
+{
+	ULONG	status, probno;
+
+	if (CM_Get_DevNode_Status(&status, &probno, devInst, 0) != CR_SUCCESS) {
+		dbg("failed to get devnode status: 0x%lx", GetLastError());
+		return FALSE;
+	}
+	if (status & DN_NEED_RESTART)
+		return TRUE;
+	return FALSE;
+}
+
 static int
-apply_driver(const char *inst_id, BOOL is_stub)
+apply_driver(const char *inst_id, BOOL is_stub, PBOOL pneed_reboot)
 {
 	HDEVINFO	dev_info;
 	SP_DEVINFO_DATA	dev_info_data;
@@ -310,6 +324,8 @@ apply_driver(const char *inst_id, BOOL is_stub)
 		dbg("failed to install stub driver: 0x%lx", GetLastError());
 		goto out;
 	}
+	if (pneed_reboot)
+		*pneed_reboot = is_reboot_required(dev_info_data.DevInst);
 	ret = 0;
 out:
 	SetupDiDestroyDeviceInfoList(dev_info);
@@ -320,13 +336,35 @@ static int
 update_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
 	char	*inst_id;
+	int	n_tries = 0;
+	BOOL	need_reboot;
 	int	ret;
 
 	ret = try_to_install_stub_driver(dev_info, pdev_info_data);
 	if (ret < 0)
 		return ret;
 	inst_id = get_id_inst(dev_info, pdev_info_data);
-	ret = apply_driver(inst_id, TRUE);
+	while (TRUE) {
+		ret = apply_driver(inst_id, TRUE, &need_reboot);
+		if (ret != 0 || !need_reboot)
+			break;
+		/*
+		 * Retry to install if reboot is required.
+		 * This means that stub driver is not installed properly by other PNP activities.
+		 */
+		if (n_tries >= 5) {
+			dbg("tried many times to install stub but failed");
+			ret = ERR_BADBIND;
+			break;
+		}
+		n_tries++;
+		if (apply_driver(inst_id, FALSE, NULL) != 0) {
+			dbg("failed to rollback for reinstall stub");
+			ret = ERR_BADBIND;
+			break;
+		}
+	}
+
 	free(inst_id);
 	if (ret == ERR_EXIST)
 		return ERR_ALREADYBIND;
@@ -340,7 +378,7 @@ rollback_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 	int	ret;
 
 	inst_id = get_id_inst(dev_info, pdev_info_data);
-	ret = apply_driver(inst_id, FALSE);
+	ret = apply_driver(inst_id, FALSE, NULL);
 	free(inst_id);
 	if (ret == ERR_EXIST)
 		return ERR_NOTBIND;

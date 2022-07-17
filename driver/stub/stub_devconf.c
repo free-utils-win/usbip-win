@@ -130,7 +130,7 @@ update_devconf(devconf_t *devconf, PUSBD_INTERFACE_INFORMATION info_intf)
 	devconf->infos_intf[info_intf->InterfaceNumber] = dup_info_intf(info_intf);
 }
 
-PUSBD_PIPE_INFORMATION
+static PUSBD_PIPE_INFORMATION
 get_intf_info_pipe(PUSBD_INTERFACE_INFORMATION info_intf, UCHAR epaddr)
 {
 	unsigned	i;

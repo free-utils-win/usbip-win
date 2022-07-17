@@ -105,7 +105,8 @@ handle_urbr_error(purb_req_t urbr, struct usbip_header *hdr)
 		 * Thus an explicit reset is requested if a STALL occurs.
 		 * This workaround resolved some USB disk problems.
 		 */
-		submit_req_reset_pipe(urbr->ep, NULL);
+		if (urbr->ep->addr != USB_DEFAULT_DEVICE_ADDRESS)
+			submit_req_reset_pipe(urbr->ep, NULL);
 	}
 
 	TRW(WRITE, "usbd status:%s: %!URBR!:", dbg_usbd_status(urb->UrbHeader.Status), urbr);

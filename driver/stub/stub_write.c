@@ -115,7 +115,7 @@ process_clear_feature(usbip_stub_dev_t *devstub, unsigned int seqnum, usb_cspkt_
 			reply_stub_req_hdr(devstub, USBIP_RET_SUBMIT, seqnum);
 		}
 		else {
-			DBGE(DBG_READWRITE, "clear_feature: no such ep\n");
+			DBGE(DBG_READWRITE, "clear_feature: no such ep: %hhx\n", (UCHAR)csp->wIndex.W);
 			reply_stub_req_err(devstub, USBIP_RET_SUBMIT, seqnum, -1);
 		}
 		break;

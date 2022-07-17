@@ -75,7 +75,7 @@ add_file_hash(HANDLE hCat, LPCSTR path, LPCSTR fname, BOOL isPEType)
 {
 	const GUID	inf_guid = { 0xDE351A42, 0x8E59, 0x11D0,{ 0x8C, 0x47, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE } };
 	const GUID	pe_guid = { 0xC689AAB8, 0x8E78, 0x11D0,{ 0x8C, 0x47, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE } };
-	LPCWSTR		wszOSAttr = L"2:5.1,2:5.2,2:6.0,2:6.1";
+	LPCWSTR		wszOSAttr = L"2:10.0";
 	CRYPTCATMEMBER	*pCatMember;
 	WCHAR	wstrHash[2 * SHA1_HASH_LENGTH + 1], *wfname;
 	BYTE	pbHash[SHA1_HASH_LENGTH];
@@ -132,6 +132,7 @@ add_file_hash(HANDLE hCat, LPCSTR path, LPCSTR fname, BOOL isPEType)
 	}
 
 	wfname = utf8_to_wchar(fname);
+
 	// Add the "File" and "OSAttr" attributes to the newly created member
 	if (CryptCATPutAttrInfo(hCat, pCatMember, L"File", ATTR_FLAGS, 2 * ((DWORD)wcslen(wfname) + 1), (BYTE*)wfname) == NULL ||
 		CryptCATPutAttrInfo(hCat, pCatMember, L"OSAttr", ATTR_FLAGS, 2 * ((DWORD)wcslen(wszOSAttr) + 1), (BYTE*)wszOSAttr) == NULL) {

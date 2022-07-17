@@ -117,7 +117,7 @@ sign_file(LPCSTR subject, LPCSTR fpath)
 
 	// Prepare SIGNER_SIGNATURE_INFO struct
 	signerSignatureInfo.cbSize = sizeof(SIGNER_SIGNATURE_INFO);
-	signerSignatureInfo.algidHash = CALG_SHA_256;
+	signerSignatureInfo.algidHash = CALG_SHA1;
 	signerSignatureInfo.dwAttrChoice = SIGNER_NO_ATTR;
 	signerSignatureInfo.pAttrAuthcode.pAttrAuthcode = NULL;
 	signerSignatureInfo.psAuthenticated = &cryptAttributesArray;

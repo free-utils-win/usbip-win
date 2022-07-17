@@ -30,7 +30,7 @@
       <AdditionalDependencies>ntstrsafe.lib;usbd.lib;usbdex.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Inf>
-      <TimeStamp>0.3.0.0</TimeStamp>
+      <TimeStamp>0.3.6.0</TimeStamp>
     </Inf>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">

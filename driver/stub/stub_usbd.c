@@ -137,6 +137,20 @@ call_usbd(usbip_stub_dev_t *devstub, PURB purb)
 	return status;
 }
 
+/* same as call_usbd() except returning usbip status */
+static int
+call_usbd_us(usbip_stub_dev_t *devstub, PURB purb)
+{
+	NTSTATUS	status;
+
+	status = call_usbd(devstub, purb);
+	if (status == STATUS_UNSUCCESSFUL && purb->UrbHeader.Status == USBD_STATUS_STALL_PID)
+		return to_usbip_status(purb->UrbHeader.Status);
+	if (NT_SUCCESS(status))
+		return 0;
+	return -1;
+}
+
 BOOLEAN
 get_usb_status(usbip_stub_dev_t *devstub, USHORT op, USHORT idx, PVOID buf, PUCHAR plen)
 {
@@ -363,7 +377,6 @@ int
 set_feature(usbip_stub_dev_t *devstub, USHORT func, USHORT feature, USHORT index)
 {
 	URB	urb;
-	NTSTATUS	status;
 
 	urb.UrbHeader.Function = func;
 	urb.UrbHeader.Length = sizeof(struct _URB_CONTROL_FEATURE_REQUEST);
@@ -371,16 +384,7 @@ set_feature(usbip_stub_dev_t *devstub, USHORT func, USHORT feature, USHORT index
 	urb.UrbControlFeatureRequest.Index = index;
 	/* should be NULL. If not, usbd returns STATUS_INVALID_PARAMETER */
 	urb.UrbControlFeatureRequest.UrbLink = NULL;
-	status = call_usbd(devstub, &urb);
-	if (NT_SUCCESS(status))
-		return 0;
-	/*
-	 * TODO: Only applied to this routine beause it's unclear that the status is
-	 * unsuccessful when a device is stalled.
-	 */
-	if (status == STATUS_UNSUCCESSFUL && urb.UrbHeader.Status == USBD_STATUS_STALL_PID)
-		return to_usbip_status(urb.UrbHeader.Status);
-	return -1;
+	return call_usbd_us(devstub, &urb);
 }
 
 int
@@ -388,23 +392,15 @@ submit_class_vendor_req(usbip_stub_dev_t *devstub, BOOLEAN is_in, USHORT cmd, UC
 {
 	URB		Urb;
 	ULONG		flags = 0;
-	NTSTATUS	status;
+	int		ret;
 
 	if (is_in)
 		flags |= USBD_TRANSFER_DIRECTION_IN;
 	UsbBuildVendorRequest(&Urb, cmd, sizeof(struct _URB_CONTROL_VENDOR_OR_CLASS_REQUEST), flags, reservedBits, request, value, index, data, NULL, *plen, NULL);
-	status = call_usbd(devstub, &Urb);
-	if (NT_SUCCESS(status)) {
+	ret = call_usbd_us(devstub, &Urb);
+	if (ret == 0)
 		*plen = Urb.UrbControlVendorClassRequest.TransferBufferLength;
-		return 0;
-	}
-	/*
-	 * TODO: apply STALL error like as set_feature.
-	 * Should be checked that this error might be better handled in call_usbd().
-	 */
-	if (status == STATUS_UNSUCCESSFUL && Urb.UrbHeader.Status == USBD_STATUS_STALL_PID)
-		return to_usbip_status(Urb.UrbHeader.Status);
-	return -1;
+	return ret;
 }
 
 static void

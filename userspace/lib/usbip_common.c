@@ -117,13 +117,10 @@ void dump_usb_device(struct usbip_usb_device *udev)
 
 int usbip_names_init(void)
 {
-	char	*fpath_db, *fpath_mod;
+	char	*fpath_db;
 	int	ret;
 
-	fpath_mod = get_module_dir();
-	asprintf(&fpath_db, "%s\\usb.ids", fpath_mod);
-	free(fpath_mod);
-
+	fpath_db = get_abspath_from_modpath("usb.ids");
 	ret = names_init(fpath_db);
 	free(fpath_db);
 

@@ -67,14 +67,8 @@ static void
 copy_file(const char *fname, const char *path_drvpkg)
 {
 	char	*path_src, *path_dst;
-	char	*path_mod;
 
-	path_mod = get_module_dir();
-	if (path_mod == NULL) {
-		return;
-	}
-	asprintf(&path_src, "%s\\%s", path_mod, fname);
-	free(path_mod);
+	path_src = get_abspath_from_modpath(fname);
 	asprintf(&path_dst, "%s\\%s", path_drvpkg, fname);
 
 	CopyFile(path_src, path_dst, TRUE);
@@ -105,16 +99,10 @@ static void
 copy_stub_inf(const char *id_hw, const char *path_drvpkg)
 {
 	char	*path_inx, *path_dst;
-	char	*path_mod;
 	FILE	*in, *out;
 	errno_t	err;
 
-	path_mod = get_module_dir();
-	if (path_mod == NULL)
-		return;
-	asprintf(&path_inx, "%s\\usbip_stub.inx", path_mod);
-	free(path_mod);
-
+	path_inx = get_abspath_from_modpath("usbip_stub.inx");
 	err = fopen_s(&in, path_inx, "r");
 	free(path_inx);
 	if (err != 0) {

@@ -85,3 +85,17 @@ get_module_dir(void)
 		}
 	}
 }
+
+char *
+get_abspath_from_modpath(const char *fname)
+{
+	char	*path_abs, *path_mod;
+
+	path_mod = get_module_dir();
+	if (path_mod == NULL)
+		return NULL;
+	asprintf(&path_abs, "%s\\%s", path_mod, fname);
+	free(path_mod);
+
+	return path_abs;
+}

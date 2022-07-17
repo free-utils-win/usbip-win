@@ -10,7 +10,7 @@
 #include <wdfusb.h>
 #include <initguid.h>
 
-#include <UdeCx.h> //<ude/1.1/UdeCx.h>
+#include <UdeCx.h>
 
 #include "vhci_dev.h"
 #include "vhci_dbg.h"

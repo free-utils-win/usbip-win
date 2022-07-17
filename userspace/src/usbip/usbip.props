@@ -22,6 +22,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>onecoreuap.lib;setupapi.lib;wintrust.lib;newdev.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>signtool sign /f ..\..\..\driver\usbip_test.pfx /p usbip /v /d usbip.exe /fd SHA256 /du https://github.com/cezanne/usbip-win /t http://timestamp.digicert.com $(TargetPath) </Command>
+      <Message>code signing...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>

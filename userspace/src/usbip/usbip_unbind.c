@@ -40,16 +40,9 @@ walker_unbind(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno,
 		int	ret;
 
 		ret = detach_stub_driver(devno);
-		switch (ret) {
-		case 0:
-			if (!restart_device(dev_info, pdev_info_data))
-				return ERR_DRIVER;
+		if (ret == 0)
 			return 1;
-		case ERR_NOTEXIST:
-			return ERR_NOTEXIST;
-		default:
-			return ERR_GENERAL;
-		}
+		return ret;
 	}
 	return 0;
 }
@@ -71,6 +64,9 @@ static int unbind_device(char *busid)
 		case ERR_NOTEXIST:
 			err("no such device on busid %s", busid);
 			return 2;
+		case ERR_NOTBIND:
+			err("device(%s) is not bound", busid);
+			return 3;
 		default:
 			err("failed to unbind device on busid %s", busid);
 			return 3;

@@ -12,6 +12,43 @@ char *get_dev_property(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD
 BOOL build_cat(const char *path, const char *catname, const char *hwid);
 int sign_file(LPCSTR subject, LPCSTR fpath);
 
+/* should be same with strings in usbip_stub.inx */
+#define STUB_DESC	"USB/IP STUB"
+#define STUB_MFGNAME	"USB/IP Project"
+
+static BOOL
+get_drvinfo(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, BOOL is_stub, PSP_DRVINFO_DATA pdrvinfo)
+{
+	int	i;
+
+	pdrvinfo->cbSize = sizeof(SP_DRVINFO_DATA);
+
+	if (!SetupDiBuildDriverInfoList(dev_info, pdev_info_data, SPDIT_COMPATDRIVER)) {
+		dbg("failed to build driver info: 0x%lx", GetLastError());
+		return FALSE;
+	}
+
+	for (i = 0;; i++) {
+		if (!SetupDiEnumDriverInfoA(dev_info, pdev_info_data, SPDIT_COMPATDRIVER, i, pdrvinfo))
+			break;
+		if (is_stub) {
+			if (strcmp(pdrvinfo->Description, STUB_DESC) == 0 && strcmp(pdrvinfo->MfgName, STUB_MFGNAME) == 0)
+				return TRUE;
+		}
+		else
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+static BOOL
+exist_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
+{
+	SP_DRVINFO_DATA	drvinfo;
+	return get_drvinfo(dev_info, pdev_info_data, TRUE, &drvinfo);
+}
+
 BOOL
 is_service_usbip_stub(HDEVINFO dev_info, SP_DEVINFO_DATA *dev_info_data)
 {
@@ -139,12 +176,11 @@ get_temp_drvpkg_path(char path_drvpkg[])
 }
 
 static int
-apply_stub_fdo(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
+install_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
 	char	path_drvpkg[MAX_PATH + 1];
 	char	*id_hw, *path_cat;
 	char	*path_inf;
-	BOOL	reboot_required;
 	int	ret;
 
 	id_hw = get_id_hw(dev_info, pdev_info_data);
@@ -175,38 +211,154 @@ apply_stub_fdo(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 
 	free(path_cat);
 
-	/* update driver */
+	/* install oem driver */
 	asprintf(&path_inf, "%s\\usbip_stub.inf", path_drvpkg);
-	if (!UpdateDriverForPlugAndPlayDevicesA(NULL, id_hw, path_inf, INSTALLFLAG_NONINTERACTIVE | INSTALLFLAG_FORCE, &reboot_required)) {
+	if (!SetupCopyOEMInf(path_inf, NULL, SPOST_PATH, 0, NULL, 0, NULL, NULL)) {
 		DWORD	err = GetLastError();
-		dbg("failed to update driver %s ; %s ; errorcode: 0x%lx", path_inf, id_hw, err);
-		free(path_inf);
-		free(id_hw);
-		remove_dir_all(path_drvpkg);
-		if (err == 0xe0000242) {
-			/* USBIP Test certificate is not installed at trusted publisher */
-			return ERR_CERTIFICATE;
-		}
-		return ERR_GENERAL;
+		dbg("failed to SetupCopyOEMInf: 0x%lx", err);
+		ret = ERR_GENERAL;
 	}
 	free(path_inf);
 	free(id_hw);
 
 	remove_dir_all(path_drvpkg);
-
-	return 0;
+	return ret;
 }
 
-static BOOL
+static int
+try_to_install_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
+{
+	if (exist_stub_driver(dev_info, pdev_info_data))
+		return 0;
+
+	return install_stub_driver(dev_info, pdev_info_data);
+}
+
+static char *
+get_stub_inf(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DATA pdrvinfo)
+{
+	PSP_DRVINFO_DETAIL_DATA	pdrvinfo_detail;
+	DWORD	reqsize;
+	char	*buf, *inf_name;
+
+	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, NULL, 0, &reqsize))
+		return NULL;
+	buf = (char *)malloc(reqsize);
+	if (buf == NULL)
+		return NULL;
+	pdrvinfo_detail = (PSP_DRVINFO_DETAIL_DATA)buf;
+	pdrvinfo_detail->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA);
+	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, pdrvinfo_detail, reqsize, &reqsize)) {
+		free(buf);
+		return NULL;
+	}
+	inf_name = _strdup(pdrvinfo_detail->InfFileName);
+	if (pdrvinfo_detail->InfFileName) {
+		char	*sep_last = strrchr(pdrvinfo_detail->InfFileName, '\\');
+		if (sep_last)
+			inf_name = _strdup(sep_last + 1);
+		else
+			inf_name = _strdup(pdrvinfo_detail->InfFileName);
+	}
+	free(buf);
+	return inf_name;
+}
+
+static void
+try_to_uninstall_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
+{
+	SP_DRVINFO_DATA	drvinfo;
+	char	*inf_name;
+
+	if (!get_drvinfo(dev_info, pdev_info_data, TRUE, &drvinfo))
+		return;
+	inf_name = get_stub_inf(dev_info, pdev_info_data, &drvinfo);
+	if (inf_name) {
+		if (!SetupUninstallOEMInf(inf_name, 0, NULL)) {
+			dbg("failed to uninstall stub driver package: 0x%lx", GetLastError());
+		}
+		free(inf_name);
+	}
+}
+
+static int
+apply_driver(const char *inst_id, BOOL is_stub)
+{
+	HDEVINFO	dev_info;
+	SP_DEVINFO_DATA	dev_info_data;
+	SP_DRVINFO_DATA	drvinfo;
+	SP_DEVINSTALL_PARAMS	devinstparams;
+	SP_DRVINSTALL_PARAMS	drvinstparams;
+	int	ret = ERR_GENERAL;
+
+	dev_info = SetupDiCreateDeviceInfoList(NULL, NULL);
+	dev_info_data.cbSize = sizeof(SP_DEVINFO_DATA);
+	if (!SetupDiOpenDeviceInfoA(dev_info, inst_id, NULL, 0, &dev_info_data)) {
+		dbg("failed to open device info: 0x%lx", GetLastError());
+		goto out;
+	}
+	if (!get_drvinfo(dev_info, &dev_info_data, is_stub, &drvinfo)) {
+		dbg("failed to get stub driver info: 0x%lx", GetLastError());
+		goto out;
+	}
+	if (!SetupDiSetSelectedDriver(dev_info, &dev_info_data, &drvinfo)) {
+		dbg("failed to select stub driver: 0x%lx", GetLastError());
+		goto out;
+	}
+
+	drvinstparams.cbSize = sizeof(SP_DRVINSTALL_PARAMS);
+	if (SetupDiGetDriverInstallParams(dev_info, &dev_info_data, &drvinfo, &drvinstparams)) {
+		if (drvinstparams.Flags & DNF_INSTALLEDDRIVER) {
+			ret = ERR_EXIST;
+			goto out;
+		}
+	}
+	devinstparams.cbSize = sizeof(SP_DEVINSTALL_PARAMS);
+	if (SetupDiGetDeviceInstallParams(dev_info, &dev_info_data, &devinstparams)) {
+		devinstparams.Flags += DI_QUIETINSTALL;
+		SetupDiSetDeviceInstallParams(dev_info, &dev_info_data, &devinstparams);
+	}
+	if (!SetupDiInstallDevice(dev_info, &dev_info_data)) {
+		dbg("failed to install stub driver: 0x%lx", GetLastError());
+		goto out;
+	}
+	ret = 0;
+out:
+	SetupDiDestroyDeviceInfoList(dev_info);
+	return ret;
+}
+
+static int
+update_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
+{
+	char	*inst_id;
+	int	ret;
+
+	ret = try_to_install_stub_driver(dev_info, pdev_info_data);
+	if (ret < 0)
+		return ret;
+	inst_id = get_id_inst(dev_info, pdev_info_data);
+	ret = apply_driver(inst_id, TRUE);
+	free(inst_id);
+	if (ret == ERR_EXIST)
+		return ERR_ALREADYBIND;
+	return ret;
+}
+
+static int
 rollback_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
-	BOOL	needReboot;
+	char	*inst_id;
+	int	ret;
 
-	if (!DiRollbackDriver(dev_info, pdev_info_data, NULL, ROLLBACK_FLAG_NO_UI, &needReboot)) {
-		dbg("failed to rollback driver: %lx", GetLastError());
-		return FALSE;
-	}
-	return TRUE;
+	inst_id = get_id_inst(dev_info, pdev_info_data);
+	ret = apply_driver(inst_id, FALSE);
+	free(inst_id);
+	if (ret == ERR_EXIST)
+		return ERR_NOTBIND;
+	if (ret == 0)
+		try_to_uninstall_stub_driver(dev_info, pdev_info_data);
+	return ret;
 }
 
 static int
@@ -215,7 +367,9 @@ walker_attach(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno,
 	devno_t	*pdevno = (devno_t *)ctx;
 
 	if (devno == *pdevno) {
-		int	ret = apply_stub_fdo(dev_info, pdev_info_data);
+		int	ret;
+
+		ret = update_driver(dev_info, pdev_info_data);
 		if (ret < 0)
 			return ret;
 		return 1;
@@ -234,10 +388,8 @@ attach_stub_driver(devno_t devno)
 		return ERR_NOTEXIST;
 	case 1:
 		return 0;
-	case ERR_CERTIFICATE:
-		return ERR_CERTIFICATE;
 	default:
-		return ERR_GENERAL;
+		return ret;
 	}
 }
 
@@ -247,8 +399,11 @@ walker_detach(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno,
 	devno_t	*pdevno = (devno_t *)ctx;
 
 	if (devno == *pdevno) {
-		if (!rollback_driver(dev_info, pdev_info_data))
-			return ERR_GENERAL;
+		int	ret;
+
+		ret = rollback_driver(dev_info, pdev_info_data);
+		if (ret < 0)
+			return ret;
 		return 1;
 	}
 	return 0;
@@ -260,9 +415,12 @@ detach_stub_driver(devno_t devno)
 	int	ret;
 
 	ret = traverse_usbdevs(walker_detach, TRUE, &devno);
-	if (ret == 1)
-		return 0;
-	if (ret == 0)
+	switch (ret) {
+	case 0:
 		return ERR_NOTEXIST;
-	return ERR_GENERAL;
+	case 1:
+		return 0;
+	default:
+		return ret;
+	}
 }

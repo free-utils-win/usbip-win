@@ -33,6 +33,8 @@
 #define ERR_PORTFULL	(-10)
 #define ERR_ACCESS	(-11)
 #define ERR_CERTIFICATE	(-12)
+#define ERR_ALREADYBIND	(-13)
+#define ERR_NOTBIND	(-14)
 
 #define USBIP_DEV_PATH_MAX		256
 #define USBIP_BUS_ID_SIZE		32

@@ -124,6 +124,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\usbip_const.h" />
+    <ClInclude Include="..\..\include\usb_id_const.h" />
+    <ClInclude Include="..\..\include\usb_const.h" />
     <ClInclude Include="..\config.h" />
     <ClInclude Include="dbgcode.h" />
     <ClInclude Include="list.h" />

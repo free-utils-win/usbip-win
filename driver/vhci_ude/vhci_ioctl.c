@@ -3,6 +3,8 @@
 
 #include "usbip_vhci_api.h"
 
+#include "usb_const.h"
+
 NTSTATUS
 plugin_vusb(pctx_vhci_t vhci, WDFREQUEST req, pvhci_pluginfo_t pluginfo);
 
@@ -127,8 +129,8 @@ ioctl_plugin_vusb(WDFQUEUE queue, WDFREQUEST req, size_t inlen, size_t outlen)
 		return status;
 	}
 	pdscr_fullsize = &pluginfo->dscr_conf.wTotalLength;
-	if (len != sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9) {
-		TRE(IOCTL, "invalid pluginfo format: %lld != %lld", len, sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9);
+	if (len != sizeof(vhci_pluginfo_t) + *pdscr_fullsize - LEN_USB_CONFIGURATION_DESCRIPTOR) { // - 9
+		TRE(IOCTL, "invalid pluginfo format: %lld != %lld", len, sizeof(vhci_pluginfo_t) + *pdscr_fullsize - LEN_USB_CONFIGURATION_DESCRIPTOR); // - 9
 		return STATUS_INVALID_PARAMETER;
 	}
 	vhci = *TO_PVHCI(queue);

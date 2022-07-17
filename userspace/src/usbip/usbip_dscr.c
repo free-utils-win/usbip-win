@@ -5,6 +5,8 @@
 #include "usbip_dscr.h"
 #include "usbip_const.h"
 
+#include "usb_const.h"
+
 /* sufficient large enough seq used to avoid conflict with normal vhci operation */
 static unsigned	seqnum = 0x7ffffff;
 
@@ -55,16 +57,16 @@ fetch_descriptor(SOCKET sockfd, UINT8 dscr_type, unsigned devid, void* dscr, uns
 int
 fetch_device_descriptor(SOCKET sockfd, unsigned devid, PUSB_DEVICE_DESCRIPTOR dscr)
 {
-	return fetch_descriptor(sockfd, 1, devid, dscr, sizeof(struct _USB_DEVICE_DESCRIPTOR));
+	return fetch_descriptor(sockfd, 1, devid, dscr, LEN_USB_DEVICE_DESCRIPTOR);
 }
 
 int
 fetch_conf_descriptor(SOCKET sockfd, unsigned devid, PUSB_CONFIGURATION_DESCRIPTOR dscr, unsigned short *plen)
 {
-	struct _USB_CONFIGURATION_DESCRIPTOR	buf;
+	struct _USB_CONFIGURATION_DESCRIPTOR	buf; //[9]
 	unsigned short	alen;
 
-	if (fetch_descriptor(sockfd, 2, devid, &buf, sizeof(struct _USB_CONFIGURATION_DESCRIPTOR)) < 0)
+	if (fetch_descriptor(sockfd, 2, devid, &buf, LEN_USB_CONFIGURATION_DESCRIPTOR) < 0)
 		return -1;
 	alen = buf.wTotalLength;
 	if (dscr == NULL) {

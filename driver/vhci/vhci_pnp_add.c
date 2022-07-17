@@ -2,6 +2,8 @@
 
 #include "vhci_pnp.h"
 
+#include "usb_id_const.h"
+
 #define MAX_HUB_PORTS		6
 
 static PAGEABLE BOOLEAN

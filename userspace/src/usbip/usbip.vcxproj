@@ -122,6 +122,7 @@
     <ClCompile Include="usbip_vhci.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\usb_const.h" />
     <ClInclude Include="..\..\config.h" />
     <ClInclude Include="usbip.h" />
     <ClInclude Include="usbip_dscr.h" />

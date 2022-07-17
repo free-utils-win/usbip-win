@@ -59,6 +59,7 @@
     <ClCompile Include="vhci_write.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\usb_const.h" />
     <ClInclude Include="vhci_urbr.h" />
     <ClInclude Include="vhci_dbg.h" />
     <ClInclude Include="vhci_dev.h" />

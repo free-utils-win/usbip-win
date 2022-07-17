@@ -9,6 +9,8 @@
 #include "usbip_vhci_api.h"
 #include "devconf.h"
 
+#include "usb_const.h"
+
 extern VOID
 setup_ep_callbacks(PUDECX_USB_DEVICE_STATE_CHANGE_CALLBACKS pcallbacks);
 
@@ -184,7 +186,7 @@ setup_descriptors(PUDECXUSBDEVICE_INIT pdinit, pvhci_pluginfo_t pluginfo)
 	NTSTATUS	status;
 	USHORT		conf_dscr_fullsize;
 
-	status = UdecxUsbDeviceInitAddDescriptor(pdinit, (PUCHAR)&pluginfo->dscr_dev, sizeof(struct _USB_DEVICE_DESCRIPTOR));
+	status = UdecxUsbDeviceInitAddDescriptor(pdinit, (PUCHAR)&pluginfo->dscr_dev, LEN_USB_DEVICE_DESCRIPTOR);
 	if (NT_ERROR(status)) {
 		TRW(PLUGIN, "failed to add a device descriptor to device init");
 	}

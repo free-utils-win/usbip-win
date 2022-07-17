@@ -9,6 +9,8 @@
 #include "usb_util.h"
 #include "usbip_proto.h"
 
+#include "usb_const.h"
+
 extern CHAR vhub_get_empty_port(pvhub_dev_t vhub);
 extern void vhub_attach_vpdo(pvhub_dev_t vhub, pvpdo_dev_t vpdo);
 
@@ -89,7 +91,7 @@ setup_vpdo_with_dsc_conf(pvpdo_dev_t vpdo, PUSB_CONFIGURATION_DESCRIPTOR dsc_con
 }
 
 PAGEABLE NTSTATUS
-vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, ULONG inlen, PFILE_OBJECT fo)
+vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, size_t inlen, PFILE_OBJECT fo)
 {
 	PDEVICE_OBJECT	devobj;
 	pvpdo_dev_t	vpdo, devpdo_old;
@@ -102,10 +104,11 @@ vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, ULONG inlen, PFILE
 		return STATUS_INVALID_PARAMETER;
 	}
 	pdscr_fullsize = &pluginfo->dscr_conf.wTotalLength;
-	if (inlen != sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9) {
-		DBGE(DBG_IOCTL, "invalid pluginfo format: %lld != %lld", inlen, sizeof(vhci_pluginfo_t) + *pdscr_fullsize - 9);
+	if (inlen != sizeof(vhci_pluginfo_t) + *pdscr_fullsize - LEN_USB_CONFIGURATION_DESCRIPTOR) { // - 9
+		DBGE(DBG_IOCTL, "invalid pluginfo format: %lld != %lld", inlen, sizeof(vhci_pluginfo_t) + *pdscr_fullsize - LEN_USB_CONFIGURATION_DESCRIPTOR); // - 9
 		return STATUS_INVALID_PARAMETER;
 	}
+	NT_ASSERTMSG("VHUB_FROM_VHCI(vhci) is NULL", VHUB_FROM_VHCI(vhci) != NULL);
 	pluginfo->port = vhub_get_empty_port(VHUB_FROM_VHCI(vhci));
 	if (pluginfo->port < 0)
 		return STATUS_END_OF_FILE;

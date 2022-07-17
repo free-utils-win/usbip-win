@@ -1,0 +1,48 @@
+#pragma once
+
+#define VHUB_PREFIX	L"USB\\ROOT_HUB"
+#define VHUB_VID	L"1209"
+#define VHUB_PID	L"8250"
+#define VHUB_REV	L"0000"
+
+#define HWID_VHUB \
+	VHUB_PREFIX \
+	L"&VID_" VHUB_VID \
+	L"&PID_" VHUB_PID \
+	L"&REV_" VHUB_REV
+
+#define DEVID_VHUB	HWID_VHUB
+
+#define HWIDS_VHUB \
+	DEVID_VHUB L"\0" \
+	VHUB_PREFIX L"&VID_" VHUB_VID L"&PID_" VHUB_PID L"\0"
+
+#define FMT_USB_VID_PID		L"USB\\VID_%04hx&PID_%04hx" // 21 chars after formatting
+#define LEN_FMT_USB_VID_PID	21
+
+#define FMT_USB_VID_PID_REV_		L"USB\\VID_%04hx&PID_%04hx&REV_%04hx;"	// 31 chars after formatting
+#define LEN_FMT_USB_VID_PID_REV_	31
+
+#define FMT_USB_VID_PID_		L"USB\\VID_%04hx&PID_%04hx;"		// 22 chars after formatting
+#define LEN_FMT_USB_VID_PID_	22
+
+#define LEN_FMT_USB_VID_PID_REV_2	( LEN_FMT_USB_VID_PID_REV_ + LEN_FMT_USB_VID_PID_ )
+
+#define FMT_USB_CLASS_SUBCLASS_PROT_		L"USB\\Class_%02hhx&SubClass_%02hhx&Prot_%02hhx;" // 33 chars after formatting
+#define LEN_FMT_USB_CLASS_SUBCLASS_PROT_	33
+
+#define FMT_USB_CLASS_SUBCLASS_		L"USB\\Class_%02hhx&SubClass_%02hhx;" // 25 chars after formatting
+#define LEN_FMT_USB_CLASS_SUBCLASS_	25
+
+#define FMT_USB_CLASS_		L"USB\\Class_%02hhx;"	// 13 chars after formatting
+#define LEN_FMT_USB_CLASS_	13
+
+#define FMT_USB_COMPOSITE_		L"USB\\COMPOSITE;"	// 14 chars
+#define LEN_FMT_USB_COMPOSITE_	14
+
+#define LEN_FMT_USB_CLASS_SUBCLASS_PROT_COMPOSITE_4	( LEN_FMT_USB_CLASS_SUBCLASS_PROT_ + LEN_FMT_USB_CLASS_SUBCLASS_ \
+													+ LEN_FMT_USB_CLASS_ + LEN_FMT_USB_COMPOSITE_ )
+
+#define LEN_FMT_USB_CLASS_SUBCLASS_PROT_3	( LEN_FMT_USB_CLASS_SUBCLASS_PROT_ + LEN_FMT_USB_CLASS_SUBCLASS_ + LEN_FMT_USB_CLASS_ )
+
+#define LEN_FMT_USB_CLASS_SUBCLASS_PROT_2	( LEN_FMT_USB_CLASS_SUBCLASS_PROT_ + LEN_FMT_USB_CLASS_SUBCLASS_ )

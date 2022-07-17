@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef _USBIP_ENUM_H
-#define _USBIP_ENUM_H
+#ifndef _USBIP_CONST_H
+#define _USBIP_CONST_H
 
 /* FIXME: how to sync with drivers/usbip_common.h ? */
 enum usbip_device_status {
@@ -23,4 +23,4 @@ enum usbip_device_status {
 	VDEV_ST_ERROR
 };
 
-#endif //_USBIP_ENUM_H
+#endif //_USBIP_CONST_H

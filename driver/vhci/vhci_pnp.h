@@ -6,16 +6,13 @@
 #define HWID_ROOT	L"USBIPWIN\\root"
 #define HWID_VHCI	L"USBIPWIN\\vhci"
 
-#define VHUB_PREFIX	L"USB\\ROOT_HUB"
-#define VHUB_VID	L"1209"
-#define VHUB_PID	L"8250"
-#define VHUB_REV	L"0000"
+#define DEVID_VHCI	HWID_VHCI
 
-#define HWID_VHUB \
-	VHUB_PREFIX \
-	L"&VID_" VHUB_VID \
-	L"&PID_" VHUB_PID \
-	L"&REV_" VHUB_REV
+/*
+ * The first hardware ID in the list should be the device ID, and
+ * the remaining IDs should be listed in order of decreasing suitability.
+ */
+#define HWIDS_VHCI	DEVID_VHCI L"\0"
 
 #define INITIALIZE_PNP_STATE(_Data_)    \
         (_Data_)->common.DevicePnPState =  NotStarted;\

@@ -86,6 +86,10 @@ pnp_query_cap_vpdo(pvpdo_dev_t vpdo, PIO_STACK_LOCATION irpstack)
 		return STATUS_UNSUCCESSFUL;
 	}
 
+	NT_ASSERTMSG("vpdo is NULL", vpdo != NULL);
+	NT_ASSERTMSG("vpdo->common.parent is NULL", vpdo->common.parent != NULL);
+	NT_ASSERTMSG("vpdo->common.parent->parent is NULL", vpdo->common.parent->parent != NULL);
+	NT_ASSERTMSG("vpdo->common.parent->parent->parent is NULL", vpdo->common.parent->parent->parent != NULL);
 	// Get the device capabilities of the root pdo
 	status = get_device_capabilities(vpdo->common.parent->parent->parent->devobj_lower, &caps_parent);
 	if (!NT_SUCCESS(status)) {

@@ -6,10 +6,10 @@
 #include "usbip_vhci_api.h"
 #include "vhci_pnp.h"
 
-extern NTSTATUS vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, ULONG inlen, PFILE_OBJECT fo);
+extern NTSTATUS vhci_plugin_vpdo(pvhci_dev_t vhci, pvhci_pluginfo_t pluginfo, size_t inlen, PFILE_OBJECT fo);
 extern NTSTATUS vhub_get_ports_status(pvhub_dev_t vhub, ioctl_usbip_vhci_get_ports_status *st);
 extern NTSTATUS vhub_get_imported_devs(pvhub_dev_t vhub, pioctl_usbip_vhci_imported_dev_t idevs, PULONG poutlen);
-extern NTSTATUS vhci_ioctl_user_request(pvhci_dev_t vhci, PVOID buffer, ULONG inlen, PULONG poutlen);
+extern NTSTATUS vhci_ioctl_user_request(pvhci_dev_t vhci, PVOID buffer, size_t inlen, PULONG poutlen);
 
 static PAGEABLE NTSTATUS
 get_hcd_driverkey_name(pvhci_dev_t vhci, PVOID buffer, PULONG poutlen)
@@ -58,7 +58,7 @@ get_name_prefix_size(PWCHAR name)
 }
 
 PAGEABLE NTSTATUS
-vhub_get_roothub_name(pvhub_dev_t vhub, PVOID buffer, ULONG inlen, PULONG poutlen)
+vhub_get_roothub_name(pvhub_dev_t vhub, PVOID buffer, size_t inlen, PULONG poutlen)
 {
 	PUSB_ROOT_HUB_NAME	roothub_name = (PUSB_ROOT_HUB_NAME)buffer;
 	SIZE_T	roothub_namelen, prefix_len;
@@ -84,8 +84,10 @@ vhub_get_roothub_name(pvhub_dev_t vhub, PVOID buffer, ULONG inlen, PULONG poutle
 }
 
 PAGEABLE NTSTATUS
-vhci_ioctl_vhci(pvhci_dev_t vhci, PIO_STACK_LOCATION irpstack, ULONG ioctl_code, PVOID buffer, ULONG inlen, ULONG *poutlen)
+vhci_ioctl_vhci(pvhci_dev_t vhci, PIO_STACK_LOCATION irpstack, ULONG ioctl_code, PVOID buffer, size_t inlen, ULONG *poutlen)
 {
+	NT_ASSERTMSG("vhci is NULL", vhci != NULL);
+
 	NTSTATUS	status = STATUS_INVALID_DEVICE_REQUEST;
 
 	switch (ioctl_code) {
@@ -94,10 +96,13 @@ vhci_ioctl_vhci(pvhci_dev_t vhci, PIO_STACK_LOCATION irpstack, ULONG ioctl_code,
 		*poutlen = sizeof(vhci_pluginfo_t);
 		break;
 	case IOCTL_USBIP_VHCI_GET_PORTS_STATUS:
-		if (*poutlen == sizeof(ioctl_usbip_vhci_get_ports_status))
+		if (*poutlen == sizeof(ioctl_usbip_vhci_get_ports_status)) {
+			NT_ASSERTMSG("VHUB_FROM_VHCI(vhci) is NULL", VHUB_FROM_VHCI(vhci) != NULL);
 			status = vhub_get_ports_status(VHUB_FROM_VHCI(vhci), (ioctl_usbip_vhci_get_ports_status *)buffer);
+		}
 		break;
 	case IOCTL_USBIP_VHCI_GET_IMPORTED_DEVICES:
+		NT_ASSERTMSG("VHUB_FROM_VHCI(vhci) is NULL", VHUB_FROM_VHCI(vhci) != NULL);
 		status = vhub_get_imported_devs(VHUB_FROM_VHCI(vhci), (pioctl_usbip_vhci_imported_dev_t)buffer, poutlen);
 		break;
 	case IOCTL_USBIP_VHCI_UNPLUG_HARDWARE:
@@ -109,6 +114,10 @@ vhci_ioctl_vhci(pvhci_dev_t vhci, PIO_STACK_LOCATION irpstack, ULONG ioctl_code,
 		status = get_hcd_driverkey_name(vhci, buffer, poutlen);
 		break;
 	case IOCTL_USB_GET_ROOT_HUB_NAME:
+		NT_ASSERTMSG("vhci->common.child_pdo is NULL", vhci->common.child_pdo != NULL);
+		NT_ASSERTMSG("vhci->common.child_pdo->fdo is NULL", vhci->common.child_pdo->fdo != NULL);
+		NT_ASSERTMSG("vhci->common.child_pdo->fdo->Self is NULL", vhci->common.child_pdo->fdo->Self != NULL);
+		NT_ASSERTMSG("DEVOBJ_TO_VHUB(vhci->common.child_pdo->fdo->Self) is NULL", DEVOBJ_TO_VHUB(vhci->common.child_pdo->fdo->Self) != NULL);
 		status = vhub_get_roothub_name(DEVOBJ_TO_VHUB(vhci->common.child_pdo->fdo->Self), buffer, inlen, poutlen);
 		break;
 	case IOCTL_USB_USER_REQUEST:

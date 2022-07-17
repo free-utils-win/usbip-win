@@ -44,7 +44,7 @@ convert_to_hashstr(PBYTE pbHash, LPWSTR wstrHash)
 {
 	int	i;
 	for (i = 0; i < SHA1_HASH_LENGTH; i++) {
-		_snwprintf_s(&wstrHash[i * 2], 3, _TRUNCATE, L"%02X", pbHash[i]);
+		_snwprintf_s(&wstrHash[i * sizeof(wchar_t)], 3, _TRUNCATE, L"%02X", pbHash[i]);
 	}
 }
 

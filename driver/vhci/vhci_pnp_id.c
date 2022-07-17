@@ -3,33 +3,23 @@
 #include "usbip_vhci_api.h"
 #include "vhci_irp.h"
 
-#define DEVID_VHCI	HWID_VHCI
+#include "usb_id_const.h"
+
 /* Device with zero class/subclass/protocol */
 #define IS_ZERO_CLASS(vpdo)	((vpdo)->usbclass == 0x00 && (vpdo)->subclass == 0x00 && (vpdo)->protocol == 0x00 && (vpdo)->inum > 1)
 /* Device with IAD(Interface Association Descriptor) */
 #define IS_IAD_DEVICE(vpdo)	((vpdo)->usbclass == 0xef && (vpdo)->subclass == 0x02 && (vpdo)->protocol == 0x01)
-#define DEVID_VHUB	HWID_VHUB
-
-/*
- * The first hardware ID in the list should be the device ID, and
- * the remaining IDs should be listed in order of decreasing suitability.
- */
-#define HWIDS_VHCI	DEVID_VHCI L"\0"
-
-#define HWIDS_VHUB \
-	DEVID_VHUB L"\0" \
-	VHUB_PREFIX L"&VID_" VHUB_VID L"&PID_" VHUB_PID L"\0"
 
 // vdev_type_t is an index
 static const LPCWSTR	vdev_devids[] = {
 	NULL, DEVID_VHCI, NULL, DEVID_VHUB, NULL,
-	L"USB\\VID_%04hx&PID_%04hx" // 21 chars after formatting
+	FMT_USB_VID_PID
 };
 
 static const size_t	vdev_devid_size[] = {
 	0, sizeof(DEVID_VHCI),
 	0, sizeof(DEVID_VHUB),
-	0, (21 + 1) * sizeof(WCHAR)
+	0, (LEN_FMT_USB_VID_PID + 1) * sizeof(WCHAR)
 };
 
 /* HW & compatible id use multi string.
@@ -38,14 +28,14 @@ static const size_t	vdev_devid_size[] = {
 static const LPCWSTR	vdev_hwids[] = {
 	NULL, HWIDS_VHCI,
 	NULL, HWIDS_VHUB,
-	NULL, L"USB\\VID_%04hx&PID_%04hx&REV_%04hx;"	// 31 chars after formatting
-	      L"USB\\VID_%04hx&PID_%04hx;"		// 22 chars after formatting
+	NULL, FMT_USB_VID_PID_REV_
+		  FMT_USB_VID_PID_
 };
 
 static const size_t	vdev_hwids_size[] = {
 	0, sizeof(HWIDS_VHCI),
 	0, sizeof(HWIDS_VHUB),
-	0, (31 + 22 + 1) * sizeof(WCHAR)
+	0, (LEN_FMT_USB_VID_PID_REV_ + LEN_FMT_USB_VID_PID_ + 1) * sizeof(WCHAR)
 };
 
 /*
@@ -94,7 +84,7 @@ setup_hw_ids(pvdev_t vdev, PIRP irp)
 
 	ids_fmt = vdev_hwids[vdev->type];
 	if (ids_fmt == NULL) {
-		DBGI(DBG_PNP, "%s: query hw ids: NOT SUPPORTED%s\n", dbg_vdev_type(vdev->type));
+		DBGI(DBG_PNP, "%s: query hw ids: NOT SUPPORTED\n", dbg_vdev_type(vdev->type));
 		return STATUS_NOT_SUPPORTED;
 	}
 
@@ -104,11 +94,15 @@ setup_hw_ids(pvdev_t vdev, PIRP irp)
 		DBGE(DBG_PNP, "%s: query hw ids: out of memory\n", dbg_vdev_type(vdev->type));
 		return STATUS_INSUFFICIENT_RESOURCES;
 	}
+	ids_hw[ids_size / sizeof(WCHAR) - 1] = L'\0';
 	if (vdev->type == VDEV_VPDO) {
 		pvpdo_dev_t vpdo = (pvpdo_dev_t)vdev;
 		RtlStringCbPrintfW(ids_hw, ids_size, ids_fmt,
 				   vpdo->vendor, vpdo->product, vpdo->revision, vpdo->vendor, vpdo->product);
-		ids_hw[31 + 22 - 1] = L'\0';
+		
+		if (LEN_FMT_USB_VID_PID_REV_2 * sizeof(WCHAR) < ids_size ) {
+			ids_hw[LEN_FMT_USB_VID_PID_REV_2 - 1] = L'\0';
+		}
 	}
 	else {
 		RtlCopyMemory(ids_hw, ids_fmt, ids_size);
@@ -117,8 +111,10 @@ setup_hw_ids(pvdev_t vdev, PIRP irp)
 	DBGI(DBG_PNP, "%s: hw id: %S\n", dbg_vdev_type(vdev->type), ids_hw);
 
 	if (vdev->type == VDEV_VPDO) {
-		/* Convert into multi string by replacing a semicolon */
-		ids_hw[31 - 1] = L'\0';
+		if (LEN_FMT_USB_VID_PID_REV_ * sizeof(WCHAR) < ids_size) {
+			/* Convert into multi string by replacing a semicolon */
+			ids_hw[LEN_FMT_USB_VID_PID_REV_ - 1] = L'\0';
+		}
 	}
 	irp->IoStatus.Information = (ULONG_PTR)ids_hw;
 
@@ -182,11 +178,12 @@ setup_compat_ids(pvdev_t vdev, PIRP irp)
 	pvpdo_dev_t	vpdo;
 	PWCHAR	ids_compat;
 	LPCWSTR	ids_fmt =
-		L"USB\\Class_%02hhx&SubClass_%02hhx&Prot_%02hhx;" // 33 chars after formatting
-		L"USB\\Class_%02hhx&SubClass_%02hhx;" // 25 chars after formatting
-		L"USB\\Class_%02hhx;"	// 13 chars after formatting
-		L"USB\\COMPOSITE;";	// 14 chars
-	size_t	ids_size = (33 + 25 + 13 + 14 + 1) * sizeof(WCHAR);
+		FMT_USB_CLASS_SUBCLASS_PROT_
+		FMT_USB_CLASS_SUBCLASS_
+		FMT_USB_CLASS_
+		FMT_USB_COMPOSITE_;
+
+	size_t	ids_size = (LEN_FMT_USB_CLASS_SUBCLASS_PROT_COMPOSITE_4 + 1) * sizeof(WCHAR);
 
 	if (vdev->type != VDEV_VPDO) {
 		DBGI(DBG_PNP, "%s: query compatible id: NOT SUPPORTED\n", dbg_vdev_type(vdev->type));
@@ -207,24 +204,24 @@ setup_compat_ids(pvdev_t vdev, PIRP irp)
 			   vpdo->usbclass);
 
 	/* Convert last semicolon */
-	ids_compat[33 + 25 + 13 + 14 - 1] = L'\0';
+	ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_COMPOSITE_4 - 1] = L'\0';
 
 	if (!need_composite(vpdo)) {
 		/* USB\COMPOSITE is dropped */
-		ids_compat[33 + 25 + 13 - 1] = L'\0';
+		ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_3 - 1] = L'\0';
 	}
 
 	DBGI(DBG_PNP, "vpdo: compatible ids: %S\n", ids_compat);
 
-	ids_compat[33 - 1] = L'\0';
-	ids_compat[33 + 25 - 1] = L'\0';
-	if (ids_compat[33 + 25 + 13 - 1] == L'\0') {
+	ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_ - 1] = L'\0';
+	ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_2 - 1] = L'\0';
+	if (ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_3 - 1] == L'\0') {
 		/* no composite */
-		ids_compat[33 + 25 + 13] = L'\0';
+		ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_3] = L'\0';
 	}
 	else {
-		ids_compat[33 + 25 + 13 - 1] = L'\0';
-		ids_compat[33 + 25 + 13 + 14 - 1] = L'\0';
+		ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_3 - 1] = L'\0';
+		ids_compat[LEN_FMT_USB_CLASS_SUBCLASS_PROT_COMPOSITE_4 - 1] = L'\0';
 	}
 
 	irp->IoStatus.Information = (ULONG_PTR)ids_compat;

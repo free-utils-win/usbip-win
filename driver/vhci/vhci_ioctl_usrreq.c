@@ -6,7 +6,7 @@
 #include "vhci_dev.h"
 
 static PAGEABLE NTSTATUS
-get_power_info(PVOID buffer, ULONG inlen, PULONG poutlen)
+get_power_info(PVOID buffer, size_t inlen, PULONG poutlen)
 {
 	PUSB_POWER_INFO	pinfo = (PUSB_POWER_INFO)buffer;
 
@@ -48,7 +48,7 @@ get_power_info(PVOID buffer, ULONG inlen, PULONG poutlen)
 }
 
 static PAGEABLE NTSTATUS
-get_controller_info(PVOID buffer, ULONG inlen, PULONG poutlen)
+get_controller_info(PVOID buffer, size_t inlen, PULONG poutlen)
 {
 	PUSB_CONTROLLER_INFO_0	pinfo = (PUSB_CONTROLLER_INFO_0)buffer;
 
@@ -67,7 +67,7 @@ get_controller_info(PVOID buffer, ULONG inlen, PULONG poutlen)
 }
 
 PAGEABLE NTSTATUS
-vhci_ioctl_user_request(pvhci_dev_t vhci, PVOID buffer, ULONG inlen, PULONG poutlen)
+vhci_ioctl_user_request(pvhci_dev_t vhci, PVOID buffer, size_t inlen, PULONG poutlen)
 {
 	USBUSER_REQUEST_HEADER	*hdr = (USBUSER_REQUEST_HEADER *)buffer;
 	NTSTATUS	status = STATUS_INVALID_DEVICE_REQUEST;

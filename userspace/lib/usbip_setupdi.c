@@ -6,14 +6,18 @@
 
 #include "usbip_setupdi.h"
 
+#include "../../include/usb_id_const.h"
+#include "../../include/usb_const.h"
+
 char *
 get_dev_property(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD prop)
 {
 	char	*value;
 	DWORD	length;
+	DWORD	err;
 
 	if (!SetupDiGetDeviceRegistryProperty(dev_info, pdev_info_data, prop, NULL, NULL, 0, &length)) {
-		DWORD	err = GetLastError();
+		err = GetLastError();
 		switch (err) {
 		case ERROR_INVALID_DATA:
 			return _strdup("");
@@ -25,16 +29,19 @@ get_dev_property(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD prop)
 		}
 	}
 	else {
-		dbg("unexpected case");
+		err = GetLastError();
+		dbg("unexpected case: err: %x", err);
 		return NULL;
 	}
 	value = malloc(length);
 	if (value == NULL) {
-		dbg("out of memory");
+		err = GetLastError();
+		dbg("out of memory: err: %x", err);
 		return NULL;
 	}
 	if (!SetupDiGetDeviceRegistryProperty(dev_info, pdev_info_data, prop, NULL, (PBYTE)value, length, &length)) {
-		dbg("failed to get device property: err: %x", GetLastError());
+		err = GetLastError();
+		dbg("failed to get device property: err: %x", err);
 		free(value);
 		return NULL;
 	}
@@ -58,25 +65,29 @@ get_id_inst(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
 	char	*id_inst;
 	DWORD	length;
+	DWORD	err;
 
 	if (!SetupDiGetDeviceInstanceId(dev_info, pdev_info_data, NULL, 0, &length)) {
-		DWORD	err = GetLastError();
+		err = GetLastError();
 		if (err != ERROR_INSUFFICIENT_BUFFER) {
 			dbg("get_id_inst: failed to get instance id: err: 0x%lx", err);
 			return NULL;
 		}
 	}
 	else {
-		dbg("get_id_inst: unexpected case");
+		err = GetLastError();
+		dbg("get_id_inst: unexpected case: err: 0x%lx", err);
 		return NULL;
 	}
 	id_inst = (char *)malloc(length);
 	if (id_inst == NULL) {
-		dbg("get_id_inst: out of memory");
+		err = GetLastError();
+		dbg("get_id_inst: out of memory: err: 0x%lx", err);
 		return NULL;
 	}
 	if (!SetupDiGetDeviceInstanceId(dev_info, pdev_info_data, id_inst, length, NULL)) {
-		dbg("failed to get instance id");
+		err = GetLastError();
+		dbg("failed to get instance id: err: 0x%lx", err);
 		free(id_inst);
 		return NULL;
 	}
@@ -118,7 +129,8 @@ get_intf_detail(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, LPCGUID pgui
 	if (!SetupDiGetDeviceInterfaceDetail(dev_info, &dev_interface_data,
 		pdev_interface_detail, len, &len, NULL)) {
 		// Errors.
-		dbg("SetupDiGetDeviceInterfaceDetail failed: err: 0x%lx", GetLastError());
+		err = GetLastError();
+		dbg("SetupDiGetDeviceInterfaceDetail failed: err: 0x%lx", err);
 		free(pdev_interface_detail);
 		return NULL;
 	}
@@ -139,13 +151,17 @@ set_device_state(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD state
 	prop_params.Scope = DICS_FLAG_CONFIGSPECIFIC;//DICS_FLAG_GLOBAL;
 	prop_params.HwProfile = 0;
 
+	DWORD	err;
+
 	if (!SetupDiSetClassInstallParams(dev_info, pdev_info_data, (SP_CLASSINSTALL_HEADER *)&prop_params, sizeof(SP_PROPCHANGE_PARAMS))) {
-		dbg("failed to set class install parameters");
+		err = GetLastError();
+		dbg("failed to set class install parameters: err: 0x%lx", err);
 		return FALSE;
 	}
 
 	if (!SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, dev_info, pdev_info_data)) {
-		dbg("failed to call class installer");
+		err = GetLastError();
+		dbg("failed to call class installer: err: 0x%lx", err);
 		return FALSE;
 	}
 
@@ -155,12 +171,16 @@ set_device_state(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD state
 BOOL
 restart_device(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
+	DWORD	err;
+
 	if (!set_device_state(dev_info, pdev_info_data, DICS_DISABLE)) {
-		dbg("set_device_state DICS_DISABLE failed");
+		err = GetLastError();
+		dbg("set_device_state DICS_DISABLE failed: err: 0x%lx", err);
 		return FALSE;
 	}
 	if (!set_device_state(dev_info, pdev_info_data, DICS_ENABLE)) {
-		dbg("set_device_state DICS_ENABLE failed");
+		err = GetLastError();
+		dbg("set_device_state DICS_ENABLE failed: err: 0x%lx", err);
 		return FALSE;
 	}
 	return TRUE;

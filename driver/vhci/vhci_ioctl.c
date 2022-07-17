@@ -3,9 +3,9 @@
 #include "vhci_dev.h"
 
 extern NTSTATUS
-vhci_ioctl_vhci(pvhci_dev_t vhci, PIO_STACK_LOCATION irpstack, ULONG ioctl_code, PVOID buffer, ULONG inlen, ULONG *poutlen);
+vhci_ioctl_vhci(pvhci_dev_t vhci, PIO_STACK_LOCATION irpstack, ULONG ioctl_code, PVOID buffer, size_t inlen, ULONG *poutlen);
 extern  NTSTATUS
-vhci_ioctl_vhub(pvhub_dev_t vhub, PIRP irp, ULONG ioctl_code, PVOID buffer, ULONG inlen, ULONG *poutlen);
+vhci_ioctl_vhub(pvhub_dev_t vhub, PIRP irp, ULONG ioctl_code, PVOID buffer, size_t inlen, ULONG *poutlen);
 
 PAGEABLE NTSTATUS
 vhci_ioctl(__in PDEVICE_OBJECT devobj, __in PIRP irp)

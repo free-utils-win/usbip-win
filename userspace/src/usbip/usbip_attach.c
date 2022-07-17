@@ -29,6 +29,8 @@
 #include "usbip_dscr.h"
 #include "usbip_util.h"
 
+#include "usb_const.h"
+
 #define ATTACHER	"attacher.exe"
 
 static const char usbip_attach_usage_string[] =
@@ -85,7 +87,7 @@ build_pluginfo(SOCKET sockfd, unsigned devid)
 		return NULL;
 	}
 
-	pluginfo_size = sizeof(vhci_pluginfo_t) + conf_dscr_len - 9;
+	pluginfo_size = sizeof(vhci_pluginfo_t) + conf_dscr_len - LEN_USB_CONFIGURATION_DESCRIPTOR;
 	pluginfo = (pvhci_pluginfo_t)malloc(pluginfo_size);
 	if (pluginfo == NULL) {
 		dbg("out of memory or invalid vhci pluginfo size");

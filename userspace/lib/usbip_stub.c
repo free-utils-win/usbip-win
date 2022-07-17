@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <newdev.h>
 #include <cfgmgr32.h>
 
 char *get_dev_property(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD prop);
@@ -29,24 +30,36 @@ get_drvinfo(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, BOOL is_stub, PS
 	}
 
 	for (i = 0;; i++) {
-		if (!SetupDiEnumDriverInfoA(dev_info, pdev_info_data, SPDIT_COMPATDRIVER, i, pdrvinfo))
+		BOOL	looks_stub;
+
+		if (!SetupDiEnumDriverInfoA(dev_info, pdev_info_data, SPDIT_COMPATDRIVER, i, pdrvinfo)) {
+			pdrvinfo->cbSize = 0;
 			break;
-		if (is_stub) {
-			if (strcmp(pdrvinfo->Description, STUB_DESC) == 0 && strcmp(pdrvinfo->MfgName, STUB_MFGNAME) == 0)
-				return TRUE;
 		}
-		else
-			return TRUE;
+		looks_stub = (strcmp(pdrvinfo->Description, STUB_DESC) == 0 && strcmp(pdrvinfo->MfgName, STUB_MFGNAME) == 0) ? TRUE : FALSE;
+		if ((is_stub && looks_stub) || (!is_stub && !looks_stub))
+			break;
 	}
 
-	return FALSE;
+	return TRUE;
 }
 
 static BOOL
 exist_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
 	SP_DRVINFO_DATA	drvinfo;
-	return get_drvinfo(dev_info, pdev_info_data, TRUE, &drvinfo);
+	SP_DRVINSTALL_PARAMS	drvinstparams;
+
+	if (!get_drvinfo(dev_info, pdev_info_data, TRUE, &drvinfo) || drvinfo.cbSize == 0)
+		return FALSE;
+
+	drvinstparams.cbSize = sizeof(SP_DRVINSTALL_PARAMS);
+	if (SetupDiGetDriverInstallParams(dev_info, pdev_info_data, &drvinfo, &drvinstparams)) {
+		if (drvinstparams.Flags & DNF_INSTALLEDDRIVER) {
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 BOOL
@@ -225,12 +238,19 @@ try_to_install_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 static char *
 get_stub_inf(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DATA pdrvinfo)
 {
-	PSP_DRVINFO_DETAIL_DATA	pdrvinfo_detail;
+	SP_DRVINFO_DETAIL_DATA	drvinfo_detail, *pdrvinfo_detail;
 	DWORD	reqsize;
 	char	*buf, *inf_name;
 
-	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, NULL, 0, &reqsize))
-		return NULL;
+	/* A futile drvinfo_detail is used because NULL arg returns ERROR_INVALID_USER_BUFFER in some Win10 version(1903) */ 
+	drvinfo_detail.cbSize = sizeof(drvinfo_detail);
+	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, &drvinfo_detail, sizeof(drvinfo_detail), &reqsize)) {
+		DWORD	err = GetLastError();
+		if (err != ERROR_INSUFFICIENT_BUFFER) {
+			dbg("failed to get the size of driver detailed info: %lx", err);
+			return NULL;
+		}
+	}
 	buf = (char *)malloc(reqsize);
 	if (buf == NULL)
 		return NULL;
@@ -238,6 +258,7 @@ get_stub_inf(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DAT
 	pdrvinfo_detail->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA);
 	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, pdrvinfo_detail, reqsize, &reqsize)) {
 		free(buf);
+		dbg("failed to get driver detailed info: %lx", GetLastError());
 		return NULL;
 	}
 	inf_name = _strdup(pdrvinfo_detail->InfFileName);
@@ -252,21 +273,28 @@ get_stub_inf(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DAT
 	return inf_name;
 }
 
-static void
+static BOOL
 try_to_uninstall_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 {
 	SP_DRVINFO_DATA	drvinfo;
 	char	*inf_name;
 
 	if (!get_drvinfo(dev_info, pdev_info_data, TRUE, &drvinfo))
-		return;
+		return FALSE;
+	if (drvinfo.cbSize == 0)
+		return TRUE;
 	inf_name = get_stub_inf(dev_info, pdev_info_data, &drvinfo);
 	if (inf_name) {
+		BOOL	res = TRUE;
+
 		if (!SetupUninstallOEMInf(inf_name, 0, NULL)) {
 			dbg("failed to uninstall stub driver package: 0x%lx", GetLastError());
+			res = FALSE;
 		}
 		free(inf_name);
+		return res;
 	}
+	return FALSE;
 }
 
 static BOOL
@@ -284,13 +312,38 @@ is_reboot_required(DWORD devInst)
 }
 
 static int
+clear_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
+{
+	if (!DiInstallDevice(NULL, dev_info, pdev_info_data, NULL, DIIDFLAG_INSTALLNULLDRIVER, NULL)) {
+		dbg("failed to install null driver: 0x%lx", GetLastError());
+		return ERR_GENERAL;
+	}
+
+	if (try_to_uninstall_stub_driver(dev_info, pdev_info_data)) {
+		if (!DiInstallDevice(NULL, dev_info, pdev_info_data, NULL, DIIDFLAG_INSTALLCOPYINFDRIVERS, NULL)) {
+			DWORD	err = GetLastError();
+			if (err == ERROR_NO_DRIVER_SELECTED) {
+				/* There's no driver. It's not an error */
+				return 0;
+			}
+			dbg("failed to install org driver: 0x%lx", GetLastError());
+			return ERR_GENERAL;
+		}
+		return 0;
+	}
+
+	return ERR_EXIST;
+}
+
+#define STUB_OR_ORG()	((is_stub) ? "stub": "org")
+
+static int
 apply_driver(const char *inst_id, BOOL is_stub, PBOOL pneed_reboot)
 {
 	HDEVINFO	dev_info;
 	SP_DEVINFO_DATA	dev_info_data;
 	SP_DRVINFO_DATA	drvinfo;
 	SP_DEVINSTALL_PARAMS	devinstparams;
-	SP_DRVINSTALL_PARAMS	drvinstparams;
 	int	ret = ERR_GENERAL;
 
 	dev_info = SetupDiCreateDeviceInfoList(NULL, NULL);
@@ -300,28 +353,45 @@ apply_driver(const char *inst_id, BOOL is_stub, PBOOL pneed_reboot)
 		goto out;
 	}
 	if (!get_drvinfo(dev_info, &dev_info_data, is_stub, &drvinfo)) {
-		dbg("failed to get stub driver info: 0x%lx", GetLastError());
+		dbg("failed to get %s driver info: 0x%lx", STUB_OR_ORG(), GetLastError());
+		goto out;
+	}
+	if (!is_stub && drvinfo.cbSize == 0) {
+		dbg("stub will be unbound but there's no compatible driver ret:%s", "ERR_DRIVER");
+		ret = ERR_DRIVER;
 		goto out;
 	}
 	if (!SetupDiSetSelectedDriver(dev_info, &dev_info_data, &drvinfo)) {
-		dbg("failed to select stub driver: 0x%lx", GetLastError());
+		dbg("failed to select %s driver: 0x%lx", STUB_OR_ORG(), GetLastError());
+		ret = ERR_GENERAL;
 		goto out;
 	}
 
-	drvinstparams.cbSize = sizeof(SP_DRVINSTALL_PARAMS);
-	if (SetupDiGetDriverInstallParams(dev_info, &dev_info_data, &drvinfo, &drvinstparams)) {
-		if (drvinstparams.Flags & DNF_INSTALLEDDRIVER) {
-			ret = ERR_EXIST;
-			goto out;
-		}
-	}
 	devinstparams.cbSize = sizeof(SP_DEVINSTALL_PARAMS);
 	if (SetupDiGetDeviceInstallParams(dev_info, &dev_info_data, &devinstparams)) {
 		devinstparams.Flags += DI_QUIETINSTALL;
 		SetupDiSetDeviceInstallParams(dev_info, &dev_info_data, &devinstparams);
 	}
+
 	if (!SetupDiInstallDevice(dev_info, &dev_info_data)) {
-		dbg("failed to install stub driver: 0x%lx", GetLastError());
+		DWORD	err = GetLastError();
+
+		if (is_stub && err == ERROR_KEY_DOES_NOT_EXIST) {
+			dbg("retrying with DiInstallDevice() ret:%d", ret);
+			if (DiInstallDevice(NULL, dev_info, &dev_info_data, NULL, 0, pneed_reboot)) {
+				dbg("stub installed with DiInstallDevice() ret:%d", ret);
+				ret = 0;
+				goto out;
+			}
+			err = GetLastError();
+		}
+		if (!is_stub && err == ERROR_ACCESS_DENIED) {
+			dbg("failed to install a %s driver. Resort to clearing driver", STUB_OR_ORG());
+
+			ret = clear_driver(dev_info, &dev_info_data);
+			goto out;
+		}
+		dbg("failed to install %s driver: 0x%lx", STUB_OR_ORG(), err);
 		goto out;
 	}
 	if (pneed_reboot)
@@ -340,34 +410,34 @@ update_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 	BOOL	need_reboot;
 	int	ret;
 
+	if (exist_stub_driver(dev_info, pdev_info_data))
+		return ERR_ALREADYBIND;
 	ret = try_to_install_stub_driver(dev_info, pdev_info_data);
 	if (ret < 0)
 		return ret;
 	inst_id = get_id_inst(dev_info, pdev_info_data);
 	while (TRUE) {
 		ret = apply_driver(inst_id, TRUE, &need_reboot);
-		if (ret != 0 || !need_reboot)
+		if (ret == 0 && !need_reboot)
 			break;
 		/*
 		 * Retry to install if reboot is required.
 		 * This means that stub driver is not installed properly by other PNP activities.
 		 */
 		if (n_tries >= 5) {
-			dbg("tried many times to install stub but failed");
+			dbg("tried many times to install stub but failed ret:%s", "ERR_BADBIND");
 			ret = ERR_BADBIND;
 			break;
 		}
 		n_tries++;
 		if (apply_driver(inst_id, FALSE, NULL) != 0) {
-			dbg("failed to rollback for reinstall stub");
+			dbg("failed to rollback for reinstall stub ret:%s", "ERR_BADBIND");
 			ret = ERR_BADBIND;
 			break;
 		}
 	}
 
 	free(inst_id);
-	if (ret == ERR_EXIST)
-		return ERR_ALREADYBIND;
 	return ret;
 }
 
@@ -377,11 +447,18 @@ rollback_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 	char	*inst_id;
 	int	ret;
 
+	if (!exist_stub_driver(dev_info, pdev_info_data))
+		return ERR_NOTBIND;
 	inst_id = get_id_inst(dev_info, pdev_info_data);
 	ret = apply_driver(inst_id, FALSE, NULL);
 	free(inst_id);
-	if (ret == ERR_EXIST)
-		return ERR_NOTBIND;
+	if (ret == ERR_DRIVER) {
+		/*
+		 * There's no compatible driver except stub.
+		 * clear_driver will replace it with null driver or something by using Win10(over 1706) API.
+		 */
+		ret = clear_driver(dev_info, pdev_info_data);
+	}
 	if (ret == 0)
 		try_to_uninstall_stub_driver(dev_info, pdev_info_data);
 	return ret;
@@ -440,7 +517,7 @@ detach_stub_driver(devno_t devno)
 {
 	int	ret;
 
-	ret = traverse_usbdevs(walker_detach, TRUE, &devno);
+	ret = traverse_usbdevs(walker_detach, FALSE, &devno);
 	switch (ret) {
 	case 0:
 		return ERR_NOTEXIST;

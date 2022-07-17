@@ -8,6 +8,8 @@
 #include <newdev.h>
 #include <cfgmgr32.h>
 
+#define SAFE_FREE(p)	do { if (p) free(p); } while (0)
+
 char *get_dev_property(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, DWORD prop);
 
 BOOL build_cat(const char *path, const char *catname, const char *hwid);
@@ -16,6 +18,82 @@ int sign_file(LPCSTR subject, LPCSTR fpath);
 /* should be same with strings in usbip_stub.inx */
 #define STUB_DESC	"USB/IP STUB"
 #define STUB_MFGNAME	"USB/IP Project"
+#define HWID_SECTION	"Standard.NTamd64"
+#define HWID_KEY	"USB/IP STUB"
+
+static char *
+get_hwid_from_inf(const char *inf_path)
+{
+	HINF	hinf;
+	INFCONTEXT	ctx;
+	char	*hwid = NULL;
+
+	hinf = SetupOpenInfFile(inf_path, NULL, INF_STYLE_WIN4, NULL);
+	if (hinf == INVALID_HANDLE_VALUE) {
+		dbg("cannot open inf file: %s", inf_path);
+		return NULL;
+	}
+
+	if (SetupFindFirstLine(hinf, HWID_SECTION, HWID_KEY, &ctx)) {
+		char	buf[128];
+		DWORD	reqsize;
+
+		if (SetupGetStringField(&ctx, 2, buf, 128, &reqsize)) {
+			hwid = _strdup(buf);
+		}
+	}
+
+	SetupCloseInfFile(hinf);
+	return hwid;
+}
+
+static char *
+get_inf_path(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DATA pdrvinfo)
+{
+	SP_DRVINFO_DETAIL_DATA	drvinfo_detail, *pdrvinfo_detail;
+	DWORD	reqsize;
+	char	*buf;
+
+	/* A futile drvinfo_detail is used because NULL arg returns ERROR_INVALID_USER_BUFFER in some Win10 version(1903) */
+	drvinfo_detail.cbSize = sizeof(drvinfo_detail);
+	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, &drvinfo_detail, sizeof(drvinfo_detail), &reqsize)) {
+		DWORD	err = GetLastError();
+		if (err != ERROR_INSUFFICIENT_BUFFER) {
+			dbg("failed to get the size of driver detailed info: %lx", err);
+			return NULL;
+		}
+	}
+	buf = (char *)malloc(reqsize);
+	if (buf == NULL)
+		return NULL;
+	pdrvinfo_detail = (PSP_DRVINFO_DETAIL_DATA)buf;
+	pdrvinfo_detail->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA);
+	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, pdrvinfo_detail, reqsize, &reqsize)) {
+		free(buf);
+		dbg("failed to get driver detailed info: %lx", GetLastError());
+		return NULL;
+	}
+	return _strdup(pdrvinfo_detail->InfFileName);
+}
+
+static BOOL
+match_hwids(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DATA pdrvinfo)
+{
+	char	*hwid, *hwid_inf;
+	char	*inf_path;
+	BOOL	res = FALSE;
+
+	hwid = get_id_hw(dev_info, pdev_info_data);
+	inf_path = get_inf_path(dev_info, pdev_info_data, pdrvinfo);
+	hwid_inf = get_hwid_from_inf(inf_path);
+
+	if (hwid && hwid_inf && _stricmp(hwid, hwid_inf) == 0)
+		res = TRUE;
+	SAFE_FREE(hwid);
+	SAFE_FREE(inf_path);
+	SAFE_FREE(hwid_inf);
+	return res;
+}
 
 static BOOL
 get_drvinfo(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, BOOL is_stub, PSP_DRVINFO_DATA pdrvinfo)
@@ -37,7 +115,7 @@ get_drvinfo(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, BOOL is_stub, PS
 			break;
 		}
 		looks_stub = (strcmp(pdrvinfo->Description, STUB_DESC) == 0 && strcmp(pdrvinfo->MfgName, STUB_MFGNAME) == 0) ? TRUE : FALSE;
-		if ((is_stub && looks_stub) || (!is_stub && !looks_stub))
+		if ((is_stub && looks_stub && match_hwids(dev_info, pdev_info_data, pdrvinfo)) || (!is_stub && !looks_stub))
 			break;
 	}
 
@@ -238,38 +316,35 @@ try_to_install_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 static char *
 get_stub_inf(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, PSP_DRVINFO_DATA pdrvinfo)
 {
-	SP_DRVINFO_DETAIL_DATA	drvinfo_detail, *pdrvinfo_detail;
-	DWORD	reqsize;
-	char	*buf, *inf_name;
+	char	*inf_path, *inf_name;
+	char	windir[MAX_PATH], inf_folder_path[MAX_PATH];
+	char	*sep_last;
 
-	/* A futile drvinfo_detail is used because NULL arg returns ERROR_INVALID_USER_BUFFER in some Win10 version(1903) */ 
-	drvinfo_detail.cbSize = sizeof(drvinfo_detail);
-	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, &drvinfo_detail, sizeof(drvinfo_detail), &reqsize)) {
-		DWORD	err = GetLastError();
-		if (err != ERROR_INSUFFICIENT_BUFFER) {
-			dbg("failed to get the size of driver detailed info: %lx", err);
-			return NULL;
-		}
-	}
-	buf = (char *)malloc(reqsize);
-	if (buf == NULL)
+	inf_path = get_inf_path(dev_info, pdev_info_data, pdrvinfo);
+	if (inf_path == NULL)
 		return NULL;
-	pdrvinfo_detail = (PSP_DRVINFO_DETAIL_DATA)buf;
-	pdrvinfo_detail->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA);
-	if (!SetupDiGetDriverInfoDetail(dev_info, pdev_info_data, pdrvinfo, pdrvinfo_detail, reqsize, &reqsize)) {
-		free(buf);
-		dbg("failed to get driver detailed info: %lx", GetLastError());
+
+	sep_last = strrchr(inf_path, '\\');
+	if (sep_last == NULL) {
+		dbg("unexpected inf path: %s", inf_path);
+		free(inf_path);
 		return NULL;
 	}
-	inf_name = _strdup(pdrvinfo_detail->InfFileName);
-	if (pdrvinfo_detail->InfFileName) {
-		char	*sep_last = strrchr(pdrvinfo_detail->InfFileName, '\\');
-		if (sep_last)
-			inf_name = _strdup(sep_last + 1);
-		else
-			inf_name = _strdup(pdrvinfo_detail->InfFileName);
+
+	if (GetWindowsDirectory(windir, MAX_PATH) == 0) {
+		free(inf_path);
+		return NULL;
 	}
-	free(buf);
+
+	snprintf(inf_folder_path, MAX_PATH, "%s\\inf", windir);
+	*sep_last = '\0';
+	if (_stricmp(inf_folder_path, inf_path) != 0) {
+		dbg("non-oem inf ignored: path: %s\\%s", inf_path, sep_last + 1);
+		free(inf_path);
+		return NULL;
+	}
+	inf_name = _strdup(sep_last + 1);
+	free(inf_path);
 	return inf_name;
 }
 
@@ -288,7 +363,7 @@ try_to_uninstall_stub_driver(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data)
 		BOOL	res = TRUE;
 
 		if (!SetupUninstallOEMInf(inf_name, 0, NULL)) {
-			dbg("failed to uninstall stub driver package: 0x%lx", GetLastError());
+			dbg("failed to uninstall stub driver package(%s): 0x%lx", inf_name, GetLastError());
 			res = FALSE;
 		}
 		free(inf_name);

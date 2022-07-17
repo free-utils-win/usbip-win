@@ -115,7 +115,7 @@ int usbip_net_recv(SOCKET sockfd, void *buff, size_t bufflen)
 
 int usbip_net_send(SOCKET sockfd, const void *buff, size_t bufflen)
 {
-	return usbip_net_xmit(sockfd, (PVOID)(uintptr_t)buff, bufflen, 1);
+	return usbip_net_xmit(sockfd, (PVOID)buff, bufflen, 1);
 }
 
 int usbip_net_send_op_common(SOCKET sockfd, uint16_t code, uint32_t status)

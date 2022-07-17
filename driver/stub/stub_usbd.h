@@ -12,6 +12,7 @@ BOOLEAN get_usb_desc(usbip_stub_dev_t *devstub, UCHAR descType, UCHAR idx, USHOR
 BOOLEAN select_usb_conf(usbip_stub_dev_t *devstub, USHORT idx);
 BOOLEAN select_usb_intf(usbip_stub_dev_t *devstub, UCHAR intf_num, USHORT alt_setting);
 
+BOOLEAN reset_device(usbip_stub_dev_t *devstub, USHORT wValue);
 BOOLEAN reset_pipe(usbip_stub_dev_t *devstub, USBD_PIPE_HANDLE hPipe);
 int set_feature(usbip_stub_dev_t *devstub, USHORT func, USHORT feature, USHORT index);
 

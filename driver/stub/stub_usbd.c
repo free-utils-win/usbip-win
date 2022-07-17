@@ -23,6 +23,7 @@
 #include "usbd_helper.h"
 
 #include "stub_cspkt.h"
+#include "stub_usbd.h"
 
 #include <usbdlib.h>
 
@@ -355,6 +356,18 @@ select_usb_intf(usbip_stub_dev_t *devstub, UCHAR intf_num, USHORT alt_setting)
 		return TRUE;
 	}
 	return FALSE;
+}
+
+BOOLEAN
+reset_device(usbip_stub_dev_t *devstub, USHORT wValue)
+{
+	usb_cspkt_t	csp;
+	ULONG	len = 0;
+
+	RtlZeroMemory(&csp, 8);
+	csp.wValue.W = wValue;
+	csp.bRequest = USB_REQUEST_CLEAR_FEATURE;
+	return submit_control_transfer(devstub, &csp, NULL, &len);
 }
 
 BOOLEAN

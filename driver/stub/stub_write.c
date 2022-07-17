@@ -108,6 +108,14 @@ process_clear_feature(usbip_stub_dev_t *devstub, unsigned int seqnum, usb_cspkt_
 	DBGI(DBG_READWRITE, "clear_feature: %s\n", dbg_cspkt_recipient(CSPKT_RECIPIENT(csp)));
 
 	switch (CSPKT_RECIPIENT(csp)) {
+	case BMREQUEST_TO_DEVICE:
+		if (reset_device(devstub, csp->wValue.W))
+			reply_stub_req_hdr(devstub, USBIP_RET_SUBMIT, seqnum);
+		else {
+			DBGE(DBG_READWRITE, "failed to clear feature to device\n");
+			reply_stub_req_err(devstub, USBIP_RET_SUBMIT, seqnum, -1);
+		}
+		break;
 	case BMREQUEST_TO_ENDPOINT:
 		info_pipe = get_info_pipe(devstub->devconf, (UCHAR)csp->wIndex.W);
 		if (info_pipe) {

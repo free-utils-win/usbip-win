@@ -53,7 +53,6 @@ calc_hash(LPCSTR fpath, PBYTE pbHash)
 {
 	HANDLE	hFile;
 	DWORD	cbHash = SHA1_HASH_LENGTH;
-	//LPWSTR wszFilePath = NULL;
 
 	hFile = CreateFile(fpath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {

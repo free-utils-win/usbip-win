@@ -165,7 +165,7 @@ DriverEntry(__in PDRIVER_OBJECT drvobj, __in PUNICODE_STRING RegistryPath)
 	// Save the RegistryPath for WMI.
 	Globals.RegistryPath.MaximumLength = RegistryPath->Length + sizeof(UNICODE_NULL);
 	Globals.RegistryPath.Length = RegistryPath->Length;
-	Globals.RegistryPath.Buffer = ExAllocatePoolWithTag(PagedPool, Globals.RegistryPath.MaximumLength, USBIP_VHCI_POOL_TAG);
+	Globals.RegistryPath.Buffer = ExAllocatePool2(PagedPool, Globals.RegistryPath.MaximumLength, USBIP_VHCI_POOL_TAG);
 
 	if (!Globals.RegistryPath.Buffer) {
 		ExDeleteNPagedLookasideList(&g_lookaside);

@@ -34,6 +34,9 @@ void usbip_unbind_usage(void)
 static int
 walker_unbind(HDEVINFO dev_info, PSP_DEVINFO_DATA pdev_info_data, devno_t devno, void *ctx)
 {
+	UNREFERENCED_PARAMETER(dev_info);
+	UNREFERENCED_PARAMETER(pdev_info_data);
+
 	devno_t	*pdevno = (devno_t *)ctx;
 
 	if (devno == *pdevno) {

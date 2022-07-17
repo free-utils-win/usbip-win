@@ -112,7 +112,7 @@ setup_vhci(pctx_vhci_t vhci)
 	vhci->n_max_ports = MAX_HUB_30PORTS + MAX_HUB_20PORTS;
 	vhci->n_used_ports = 0;
 
-	vhci->vusbs = ExAllocatePoolWithTag(NonPagedPool, sizeof(pctx_vusb_t) * vhci->n_max_ports, VHCI_POOLTAG);
+	vhci->vusbs = ExAllocatePool2(NonPagedPool, sizeof(pctx_vusb_t) * vhci->n_max_ports, VHCI_POOLTAG);
 	if (vhci->vusbs == NULL) {
 		TRE(VHCI, "failed to allocate ports: out of memory");
 		return FALSE;

@@ -32,7 +32,7 @@ libdrv_strdupW(LPCWSTR cwstr)
 	status = RtlStringCchLengthW(cwstr, NTSTRSAFE_MAX_CCH, &len);
 	if (NT_ERROR(status))
 		return NULL;
-	wstr_duped = ExAllocatePoolWithTag(PagedPool, (len + 1) * sizeof(WCHAR), libdrv_pooltag);
+	wstr_duped = ExAllocatePool2(PagedPool, (len + 1) * sizeof(WCHAR), libdrv_pooltag);
 	if (wstr_duped == NULL)
 		return NULL;
 
